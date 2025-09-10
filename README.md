@@ -1,4 +1,4 @@
-# Up-to-Date AI
+# React-fast-boilerplate
 
 A full-stack application with FastAPI backend implementing hexagonal architecture and React TypeScript frontend with feature-based architecture.
 
