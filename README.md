@@ -195,6 +195,11 @@ The project includes specialized Claude AI agents in `.claude/agents/` that foll
 - **pydantic-ai-architect**: Pydantic AI agent development
 
 #### Planification Agents Structure:
+
+In `CLAUDE.md` file check the WORKFLOW RULES and SUBAGENTS MANAGEMENT section were we let the main claude agent to know about the agents and the process to follow when planning
+
+
+In each agent copy and paste this text at the end to transform them in planification agents, replacing the <agent_target>
 ```markdown
 
 ## Goal

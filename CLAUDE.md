@@ -180,7 +180,7 @@ The frontend is organized by features with each feature containing:
 - After finish the final implementation MUST use qa-criteria-validator subagent to provide a report feedback an iterate over this feedback until acceptance criterias are passed
 - After qa-criteria-validator finish, you MUST review their report and implement the feedback related with the feature
 
-### Subagents
+### SUBAGENTS MANAGEMENT
 You have access to 8 subagents:
 - shadcn-ui-architect: all task related to UI building & tweaking HAVE TO consult this agent
 - qa-criteria-validator: all final client UI/UX implementations has to be validated by this subagent to provide feedback an iterate.
