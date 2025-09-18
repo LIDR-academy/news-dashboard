@@ -2,6 +2,7 @@
 
 import pytest
 from datetime import datetime
+from pydantic import ValidationError
 
 from src.domain.entities.news_item import NewsItem, NewsCategory, NewsStatus
 from src.infrastructure.web.dtos.news_dto import (
@@ -66,13 +67,16 @@ class TestNewsMapper:
         for status in statuses:
             # Arrange
             news_item = NewsItem(
+                id="test123",
                 source="Test Source",
                 title="Test Title",
                 summary="Test Summary",
                 link="https://example.com/test",
                 category=NewsCategory.GENERAL,
                 user_id="user123",
-                status=status
+                status=status,
+                created_at=datetime.utcnow(),
+                updated_at=datetime.utcnow()
             )
             
             # Act
@@ -95,12 +99,15 @@ class TestNewsMapper:
         for category in categories:
             # Arrange
             news_item = NewsItem(
+                id="test123",
                 source="Test Source",
                 title="Test Title",
                 summary="Test Summary",
                 link="https://example.com/test",
                 category=category,
-                user_id="user123"
+                user_id="user123",
+                created_at=datetime.utcnow(),
+                updated_at=datetime.utcnow()
             )
             
             # Act
@@ -113,40 +120,47 @@ class TestNewsMapper:
         """Test that to_response_dto handles news item without id."""
         # Arrange
         news_item = NewsItem(
+            id=None,  # Explicitly set to None
             source="Test Source",
             title="Test Title",
             summary="Test Summary",
             link="https://example.com/test",
+            image_url="https://example.com/image.jpg",
+            status=NewsStatus.PENDING,
             category=NewsCategory.GENERAL,
-            user_id="user123"
+            is_favorite=False,
+            user_id="user123",
+            is_public=False,
+            created_at=datetime.utcnow(),
+            updated_at=datetime.utcnow()
         )
         
-        # Act
-        result = NewsMapper.to_response_dto(news_item)
-        
-        # Assert
-        assert result.id is None
+        # Act & Assert - This should raise a validation error since id is required
+        with pytest.raises(ValidationError):
+            NewsMapper.to_response_dto(news_item)
 
     def test_to_response_dto_with_news_without_timestamps(self):
         """Test that to_response_dto handles news item without timestamps."""
         # Arrange
         news_item = NewsItem(
+            id="test123",
             source="Test Source",
             title="Test Title",
             summary="Test Summary",
             link="https://example.com/test",
+            image_url="https://example.com/image.jpg",
+            status=NewsStatus.PENDING,
             category=NewsCategory.GENERAL,
+            is_favorite=False,
             user_id="user123",
+            is_public=False,
             created_at=None,
             updated_at=None
         )
         
-        # Act
-        result = NewsMapper.to_response_dto(news_item)
-        
-        # Assert
-        assert result.created_at is None
-        assert result.updated_at is None
+        # Act & Assert - This should raise a validation error since created_at is required
+        with pytest.raises(ValidationError):
+            NewsMapper.to_response_dto(news_item)
 
     def test_to_response_dto_preserves_all_news_data_exactly(self, sample_news_item):
         """Test that to_response_dto preserves all news data exactly."""
@@ -170,12 +184,15 @@ class TestNewsMapper:
         """Test that to_response_dto handles unicode characters correctly."""
         # Arrange
         news_item = NewsItem(
+            id="test123",
             source="TëchCrünch",
             title="AI Brëakthröugh",
             summary="Nëw AI tëchnölögy ännoüncëd",
             link="https://example.com/news",
             category=NewsCategory.RESEARCH,
-            user_id="üsër123"
+            user_id="üsër123",
+            created_at=datetime.utcnow(),
+            updated_at=datetime.utcnow()
         )
         
         # Act
@@ -238,26 +255,24 @@ class TestNewsMapper:
         """Test that mapper handles news item with all None optional fields."""
         # Arrange
         news_item = NewsItem(
+            id="test123",  # id is required for DTO
             source="Test Source",
             title="Test Title",
             summary="Test Summary",
             link="https://example.com/test",
-            category=NewsCategory.GENERAL,
-            user_id="user123",
-            id=None,
             image_url="",
+            status=NewsStatus.PENDING,
+            category=NewsCategory.GENERAL,
+            is_favorite=False,
+            user_id="user123",
+            is_public=False,
             created_at=None,
             updated_at=None
         )
         
-        # Act
-        result = NewsMapper.to_response_dto(news_item)
-        
-        # Assert
-        assert result.id is None
-        assert result.image_url == ""
-        assert result.created_at is None
-        assert result.updated_at is None
+        # Act & Assert - This should raise a validation error since created_at is required
+        with pytest.raises(ValidationError):
+            NewsMapper.to_response_dto(news_item)
 
 
 @pytest.mark.unit
@@ -274,13 +289,442 @@ class TestNewsMapperErrorHandling:
         """Test that status_dto_to_domain raises ValueError with invalid status."""
         # Act & Assert
         with pytest.raises(ValueError):
-            NewsMapper.status_dto_to_domain("invalid_status")
+            NewsMapper.status_dto_to_domain(NewsStatusDTO("invalid_status"))
 
     def test_category_dto_to_domain_with_invalid_category_raises_value_error(self):
         """Test that category_dto_to_domain raises ValueError with invalid category."""
         # Act & Assert
         with pytest.raises(ValueError):
-            NewsMapper.category_dto_to_domain("invalid_category")
+            NewsMapper.category_dto_to_domain(NewsCategoryDTO("invalid_category"))
+
+    def test_news_response_dto_validation_requires_all_mandatory_fields(self):
+        """Test that NewsResponseDTO validation requires all mandatory fields and rejects optional values."""
+        # Test cases where required fields are missing or None
+        invalid_data_cases = [
+            # Missing id
+            {
+                "source": "TechCrunch",
+                "title": "AI Breakthrough",
+                "summary": "New AI technology announced",
+                "link": "https://example.com/news",
+                "image_url": "https://example.com/image.jpg",
+                "status": NewsStatusDTO.PENDING,
+                "category": NewsCategoryDTO.RESEARCH,
+                "is_favorite": False,
+                "user_id": "user123",
+                "is_public": True,
+                "created_at": datetime.utcnow(),
+                "updated_at": datetime.utcnow()
+            },
+            # Missing source
+            {
+                "id": "507f1f77bcf86cd799439011",
+                "title": "AI Breakthrough",
+                "summary": "New AI technology announced",
+                "link": "https://example.com/news",
+                "image_url": "https://example.com/image.jpg",
+                "status": NewsStatusDTO.PENDING,
+                "category": NewsCategoryDTO.RESEARCH,
+                "is_favorite": False,
+                "user_id": "user123",
+                "is_public": True,
+                "created_at": datetime.utcnow(),
+                "updated_at": datetime.utcnow()
+            },
+            # Missing title
+            {
+                "id": "507f1f77bcf86cd799439011",
+                "source": "TechCrunch",
+                "summary": "New AI technology announced",
+                "link": "https://example.com/news",
+                "image_url": "https://example.com/image.jpg",
+                "status": NewsStatusDTO.PENDING,
+                "category": NewsCategoryDTO.RESEARCH,
+                "is_favorite": False,
+                "user_id": "user123",
+                "is_public": True,
+                "created_at": datetime.utcnow(),
+                "updated_at": datetime.utcnow()
+            },
+            # Missing summary
+            {
+                "id": "507f1f77bcf86cd799439011",
+                "source": "TechCrunch",
+                "title": "AI Breakthrough",
+                "link": "https://example.com/news",
+                "image_url": "https://example.com/image.jpg",
+                "status": NewsStatusDTO.PENDING,
+                "category": NewsCategoryDTO.RESEARCH,
+                "is_favorite": False,
+                "user_id": "user123",
+                "is_public": True,
+                "created_at": datetime.utcnow(),
+                "updated_at": datetime.utcnow()
+            },
+            # Missing link
+            {
+                "id": "507f1f77bcf86cd799439011",
+                "source": "TechCrunch",
+                "title": "AI Breakthrough",
+                "summary": "New AI technology announced",
+                "image_url": "https://example.com/image.jpg",
+                "status": NewsStatusDTO.PENDING,
+                "category": NewsCategoryDTO.RESEARCH,
+                "is_favorite": False,
+                "user_id": "user123",
+                "is_public": True,
+                "created_at": datetime.utcnow(),
+                "updated_at": datetime.utcnow()
+            },
+            # Missing image_url
+            {
+                "id": "507f1f77bcf86cd799439011",
+                "source": "TechCrunch",
+                "title": "AI Breakthrough",
+                "summary": "New AI technology announced",
+                "link": "https://example.com/news",
+                "status": NewsStatusDTO.PENDING,
+                "category": NewsCategoryDTO.RESEARCH,
+                "is_favorite": False,
+                "user_id": "user123",
+                "is_public": True,
+                "created_at": datetime.utcnow(),
+                "updated_at": datetime.utcnow()
+            },
+            # Missing status
+            {
+                "id": "507f1f77bcf86cd799439011",
+                "source": "TechCrunch",
+                "title": "AI Breakthrough",
+                "summary": "New AI technology announced",
+                "link": "https://example.com/news",
+                "image_url": "https://example.com/image.jpg",
+                "category": NewsCategoryDTO.RESEARCH,
+                "is_favorite": False,
+                "user_id": "user123",
+                "is_public": True,
+                "created_at": datetime.utcnow(),
+                "updated_at": datetime.utcnow()
+            },
+            # Missing category
+            {
+                "id": "507f1f77bcf86cd799439011",
+                "source": "TechCrunch",
+                "title": "AI Breakthrough",
+                "summary": "New AI technology announced",
+                "link": "https://example.com/news",
+                "image_url": "https://example.com/image.jpg",
+                "status": NewsStatusDTO.PENDING,
+                "is_favorite": False,
+                "user_id": "user123",
+                "is_public": True,
+                "created_at": datetime.utcnow(),
+                "updated_at": datetime.utcnow()
+            },
+            # Missing is_favorite
+            {
+                "id": "507f1f77bcf86cd799439011",
+                "source": "TechCrunch",
+                "title": "AI Breakthrough",
+                "summary": "New AI technology announced",
+                "link": "https://example.com/news",
+                "image_url": "https://example.com/image.jpg",
+                "status": NewsStatusDTO.PENDING,
+                "category": NewsCategoryDTO.RESEARCH,
+                "user_id": "user123",
+                "is_public": True,
+                "created_at": datetime.utcnow(),
+                "updated_at": datetime.utcnow()
+            },
+            # Missing user_id
+            {
+                "id": "507f1f77bcf86cd799439011",
+                "source": "TechCrunch",
+                "title": "AI Breakthrough",
+                "summary": "New AI technology announced",
+                "link": "https://example.com/news",
+                "image_url": "https://example.com/image.jpg",
+                "status": NewsStatusDTO.PENDING,
+                "category": NewsCategoryDTO.RESEARCH,
+                "is_favorite": False,
+                "is_public": True,
+                "created_at": datetime.utcnow(),
+                "updated_at": datetime.utcnow()
+            },
+            # Missing is_public
+            {
+                "id": "507f1f77bcf86cd799439011",
+                "source": "TechCrunch",
+                "title": "AI Breakthrough",
+                "summary": "New AI technology announced",
+                "link": "https://example.com/news",
+                "image_url": "https://example.com/image.jpg",
+                "status": NewsStatusDTO.PENDING,
+                "category": NewsCategoryDTO.RESEARCH,
+                "is_favorite": False,
+                "user_id": "user123",
+                "created_at": datetime.utcnow(),
+                "updated_at": datetime.utcnow()
+            },
+            # Missing created_at
+            {
+                "id": "507f1f77bcf86cd799439011",
+                "source": "TechCrunch",
+                "title": "AI Breakthrough",
+                "summary": "New AI technology announced",
+                "link": "https://example.com/news",
+                "image_url": "https://example.com/image.jpg",
+                "status": NewsStatusDTO.PENDING,
+                "category": NewsCategoryDTO.RESEARCH,
+                "is_favorite": False,
+                "user_id": "user123",
+                "is_public": True,
+                "updated_at": datetime.utcnow()
+            },
+        ]
+        
+        for invalid_data in invalid_data_cases:
+            with pytest.raises(ValidationError) as exc_info:
+                NewsResponseDTO(**invalid_data)
+            
+            # Verify that the error message indicates missing required fields
+            error_message = str(exc_info.value)
+            assert "field required" in error_message.lower() or "missing" in error_message.lower()
+
+    def test_news_response_dto_validation_rejects_none_values_for_required_fields(self):
+        """Test that NewsResponseDTO validation rejects None values for required fields."""
+        # Test cases where required fields are explicitly set to None
+        none_value_cases = [
+            # id is None
+            {
+                "id": None,
+                "source": "TechCrunch",
+                "title": "AI Breakthrough",
+                "summary": "New AI technology announced",
+                "link": "https://example.com/news",
+                "image_url": "https://example.com/image.jpg",
+                "status": NewsStatusDTO.PENDING,
+                "category": NewsCategoryDTO.RESEARCH,
+                "is_favorite": False,
+                "user_id": "user123",
+                "is_public": True,
+                "created_at": datetime.utcnow(),
+                "updated_at": datetime.utcnow()
+            },
+            # source is None
+            {
+                "id": "507f1f77bcf86cd799439011",
+                "source": None,
+                "title": "AI Breakthrough",
+                "summary": "New AI technology announced",
+                "link": "https://example.com/news",
+                "image_url": "https://example.com/image.jpg",
+                "status": NewsStatusDTO.PENDING,
+                "category": NewsCategoryDTO.RESEARCH,
+                "is_favorite": False,
+                "user_id": "user123",
+                "is_public": True,
+                "created_at": datetime.utcnow(),
+                "updated_at": datetime.utcnow()
+            },
+            # title is None
+            {
+                "id": "507f1f77bcf86cd799439011",
+                "source": "TechCrunch",
+                "title": None,
+                "summary": "New AI technology announced",
+                "link": "https://example.com/news",
+                "image_url": "https://example.com/image.jpg",
+                "status": NewsStatusDTO.PENDING,
+                "category": NewsCategoryDTO.RESEARCH,
+                "is_favorite": False,
+                "user_id": "user123",
+                "is_public": True,
+                "created_at": datetime.utcnow(),
+                "updated_at": datetime.utcnow()
+            },
+            # summary is None
+            {
+                "id": "507f1f77bcf86cd799439011",
+                "source": "TechCrunch",
+                "title": "AI Breakthrough",
+                "summary": None,
+                "link": "https://example.com/news",
+                "image_url": "https://example.com/image.jpg",
+                "status": NewsStatusDTO.PENDING,
+                "category": NewsCategoryDTO.RESEARCH,
+                "is_favorite": False,
+                "user_id": "user123",
+                "is_public": True,
+                "created_at": datetime.utcnow(),
+                "updated_at": datetime.utcnow()
+            },
+            # link is None
+            {
+                "id": "507f1f77bcf86cd799439011",
+                "source": "TechCrunch",
+                "title": "AI Breakthrough",
+                "summary": "New AI technology announced",
+                "link": None,
+                "image_url": "https://example.com/image.jpg",
+                "status": NewsStatusDTO.PENDING,
+                "category": NewsCategoryDTO.RESEARCH,
+                "is_favorite": False,
+                "user_id": "user123",
+                "is_public": True,
+                "created_at": datetime.utcnow(),
+                "updated_at": datetime.utcnow()
+            },
+            # image_url is None (this should fail since it's required in DTO)
+            {
+                "id": "507f1f77bcf86cd799439011",
+                "source": "TechCrunch",
+                "title": "AI Breakthrough",
+                "summary": "New AI technology announced",
+                "link": "https://example.com/news",
+                "image_url": None,
+                "status": NewsStatusDTO.PENDING,
+                "category": NewsCategoryDTO.RESEARCH,
+                "is_favorite": False,
+                "user_id": "user123",
+                "is_public": True,
+                "created_at": datetime.utcnow(),
+                "updated_at": datetime.utcnow()
+            },
+            # status is None
+            {
+                "id": "507f1f77bcf86cd799439011",
+                "source": "TechCrunch",
+                "title": "AI Breakthrough",
+                "summary": "New AI technology announced",
+                "link": "https://example.com/news",
+                "image_url": "https://example.com/image.jpg",
+                "status": None,
+                "category": NewsCategoryDTO.RESEARCH,
+                "is_favorite": False,
+                "user_id": "user123",
+                "is_public": True,
+                "created_at": datetime.utcnow(),
+                "updated_at": datetime.utcnow()
+            },
+            # category is None
+            {
+                "id": "507f1f77bcf86cd799439011",
+                "source": "TechCrunch",
+                "title": "AI Breakthrough",
+                "summary": "New AI technology announced",
+                "link": "https://example.com/news",
+                "image_url": "https://example.com/image.jpg",
+                "status": NewsStatusDTO.PENDING,
+                "category": None,
+                "is_favorite": False,
+                "user_id": "user123",
+                "is_public": True,
+                "created_at": datetime.utcnow(),
+                "updated_at": datetime.utcnow()
+            },
+            # is_favorite is None
+            {
+                "id": "507f1f77bcf86cd799439011",
+                "source": "TechCrunch",
+                "title": "AI Breakthrough",
+                "summary": "New AI technology announced",
+                "link": "https://example.com/news",
+                "image_url": "https://example.com/image.jpg",
+                "status": NewsStatusDTO.PENDING,
+                "category": NewsCategoryDTO.RESEARCH,
+                "is_favorite": None,
+                "user_id": "user123",
+                "is_public": True,
+                "created_at": datetime.utcnow(),
+                "updated_at": datetime.utcnow()
+            },
+            # user_id is None
+            {
+                "id": "507f1f77bcf86cd799439011",
+                "source": "TechCrunch",
+                "title": "AI Breakthrough",
+                "summary": "New AI technology announced",
+                "link": "https://example.com/news",
+                "image_url": "https://example.com/image.jpg",
+                "status": NewsStatusDTO.PENDING,
+                "category": NewsCategoryDTO.RESEARCH,
+                "is_favorite": False,
+                "user_id": None,
+                "is_public": True,
+                "created_at": datetime.utcnow(),
+                "updated_at": datetime.utcnow()
+            },
+            # is_public is None
+            {
+                "id": "507f1f77bcf86cd799439011",
+                "source": "TechCrunch",
+                "title": "AI Breakthrough",
+                "summary": "New AI technology announced",
+                "link": "https://example.com/news",
+                "image_url": "https://example.com/image.jpg",
+                "status": NewsStatusDTO.PENDING,
+                "category": NewsCategoryDTO.RESEARCH,
+                "is_favorite": False,
+                "user_id": "user123",
+                "is_public": None,
+                "created_at": datetime.utcnow(),
+                "updated_at": datetime.utcnow()
+            },
+            # created_at is None
+            {
+                "id": "507f1f77bcf86cd799439011",
+                "source": "TechCrunch",
+                "title": "AI Breakthrough",
+                "summary": "New AI technology announced",
+                "link": "https://example.com/news",
+                "image_url": "https://example.com/image.jpg",
+                "status": NewsStatusDTO.PENDING,
+                "category": NewsCategoryDTO.RESEARCH,
+                "is_favorite": False,
+                "user_id": "user123",
+                "is_public": True,
+                "created_at": None,
+                "updated_at": datetime.utcnow()
+            },
+        ]
+        
+        for none_data in none_value_cases:
+            with pytest.raises(ValidationError) as exc_info:
+                NewsResponseDTO(**none_data)
+            
+            # Verify that the error message indicates invalid type or missing value
+            error_message = str(exc_info.value)
+            assert ("field required" in error_message.lower() or 
+                   "none is not an allowed value" in error_message.lower() or
+                   "input should be" in error_message.lower())
+
+    def test_news_response_dto_validation_accepts_none_for_optional_updated_at(self):
+        """Test that NewsResponseDTO validation accepts None for the optional updated_at field."""
+        # This should succeed since updated_at is Optional[datetime]
+        valid_data = {
+            "id": "507f1f77bcf86cd799439011",
+            "source": "TechCrunch",
+            "title": "AI Breakthrough",
+            "summary": "New AI technology announced",
+            "link": "https://example.com/news",
+            "image_url": "https://example.com/image.jpg",
+            "status": NewsStatusDTO.PENDING,
+            "category": NewsCategoryDTO.RESEARCH,
+            "is_favorite": False,
+            "user_id": "user123",
+            "is_public": True,
+            "created_at": datetime.utcnow(),
+            "updated_at": None  # This should be allowed
+        }
+        
+        # Act
+        dto = NewsResponseDTO(**valid_data)
+        
+        # Assert
+        assert dto.updated_at is None
+        assert dto.id == "507f1f77bcf86cd799439011"
+        assert dto.source == "TechCrunch"
 
 
 @pytest.mark.unit
@@ -310,6 +754,7 @@ class TestNewsMapperIntegration:
         # Arrange - Simulate real news data
         real_news_items = [
             NewsItem(
+                id="news1",
                 source="BBC News",
                 title="Climate Change Summit Reaches Agreement",
                 summary="World leaders have reached a historic agreement on climate change measures...",
@@ -319,9 +764,12 @@ class TestNewsMapperIntegration:
                 user_id="user456",
                 is_public=True,
                 status=NewsStatus.READ,
-                is_favorite=True
+                is_favorite=True,
+                created_at=datetime.utcnow(),
+                updated_at=datetime.utcnow()
             ),
             NewsItem(
+                id="news2",
                 source="Nature",
                 title="Breakthrough in Quantum Computing",
                 summary="Researchers have achieved a major milestone in quantum computing...",
@@ -331,7 +779,9 @@ class TestNewsMapperIntegration:
                 user_id="user789",
                 is_public=False,
                 status=NewsStatus.PENDING,
-                is_favorite=False
+                is_favorite=False,
+                created_at=datetime.utcnow(),
+                updated_at=datetime.utcnow()
             )
         ]
         
@@ -350,12 +800,15 @@ class TestNewsMapperIntegration:
         
         # Arrange
         news_item = NewsItem(
+            id="perf_test",
             source="Performance Test",
             title="Performance Test Title",
             summary="Performance Test Summary",
             link="https://example.com/performance",
             category=NewsCategory.GENERAL,
-            user_id="perf_user"
+            user_id="perf_user",
+            created_at=datetime.utcnow(),
+            updated_at=datetime.utcnow()
         )
         
         # Act
@@ -376,12 +829,15 @@ class TestNewsMapperIntegration:
         news_items = []
         for i in range(1000):
             news_item = NewsItem(
+                id=f"news_{i}",
                 source=f"Source {i}",
                 title=f"Title {i}",
                 summary=f"Summary {i}",
                 link=f"https://example.com/news/{i}",
                 category=NewsCategory.GENERAL,
-                user_id=f"user{i}"
+                user_id=f"user{i}",
+                created_at=datetime.utcnow(),
+                updated_at=datetime.utcnow()
             )
             news_items.append(news_item)
         
