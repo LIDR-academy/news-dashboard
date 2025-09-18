@@ -287,3 +287,4 @@ When the backend is running, access:
 ## 👥 Authors
 
 - Francisco Pastor
+- Alvaro Moya
