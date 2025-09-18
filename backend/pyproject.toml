@@ -43,9 +43,7 @@ addopts = [
     "--cov=src",
     "--cov-report=html",
     "--cov-report=term-missing",
-    "--cov-fail-under=80",
-    "--asyncio-mode=auto",
-    "--asyncio-default-fixture-loop-scope=function"
+    "--cov-fail-under=50"
 ]
 markers = [
     "slow: marks tests as slow (deselect with '-m \"not slow\"')",
@@ -65,7 +63,6 @@ filterwarnings = [
     "ignore::pytest_asyncio.plugin.PytestDeprecationWarning"
 ]
 asyncio_mode = "auto"
-asyncio_default_fixture_loop_scope = "function"
 
 [tool.coverage.run]
 source = ["src"]

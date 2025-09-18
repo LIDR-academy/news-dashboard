@@ -298,7 +298,16 @@ class TestMongoDBUserRepository:
         mock_insert_result = Mock()
         mock_insert_result.inserted_id = inserted_id
         mock_mongo_collection.insert_one.return_value = mock_insert_result
-        mock_mongo_collection.find_one.return_value = {"_id": inserted_id}
+        # Mock the document returned by find_one with all required fields
+        mock_mongo_collection.find_one.return_value = {
+            "_id": inserted_id,
+            "email": user_entity_with_id.email,
+            "username": user_entity_with_id.username,
+            "hashed_password": user_entity_with_id.hashed_password,
+            "is_active": user_entity_with_id.is_active,
+            "created_at": user_entity_with_id.created_at,
+            "updated_at": user_entity_with_id.updated_at
+        }
         
         # Act
         await repository.create(user_entity_with_id)
@@ -352,7 +361,16 @@ class TestMongoDBUserRepository:
         """Test that update removes _id from the update document."""
         # Arrange
         mock_mongo_collection.update_one.return_value = Mock(modified_count=1)
-        mock_mongo_collection.find_one.return_value = {"_id": ObjectId(user_entity_with_id.id)}
+        # Mock the document returned by find_one with all required fields
+        mock_mongo_collection.find_one.return_value = {
+            "_id": ObjectId(user_entity_with_id.id),
+            "email": user_entity_with_id.email,
+            "username": user_entity_with_id.username,
+            "hashed_password": user_entity_with_id.hashed_password,
+            "is_active": user_entity_with_id.is_active,
+            "created_at": user_entity_with_id.created_at,
+            "updated_at": user_entity_with_id.updated_at
+        }
         
         # Act
         await repository.update(user_entity_with_id)
