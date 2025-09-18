@@ -18,7 +18,7 @@ const client = axios.create({
     'Content-Type': 'application/json',
   },
   withCredentials: true,
-  baseURL: import.meta.env.VITE_API_URL
+  baseURL: import.meta.env.VITE_API_URL || 'http://localhost:8000'
 })
 
 // Add a request interceptor to dynamically set the token for each request

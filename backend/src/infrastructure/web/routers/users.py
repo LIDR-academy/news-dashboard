@@ -6,15 +6,18 @@ from typing import List
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordRequestForm
 
-from src.domain.exceptions.user import UserNotFoundError, UserAlreadyExistsError
-from src.infrastructure.web.dto.user_dto import UserCreate, UserResponse, Token, LogoutResponse
+from src.domain.exceptions.user import UserNotFoundError, UserAlreadyExistsError, InvalidCredentialsError
+from src.infrastructure.web.dto.user_dto import UserCreate, UserResponse, Token, LogoutResponse, UserUpdate, ChangePasswordRequest
 from src.infrastructure.web.dependencies import (
     get_all_users_use_case,
     get_user_by_id_use_case,
     get_create_user_use_case,
     get_authenticate_user_use_case,
+    get_current_user,
     get_current_active_user,
-    get_logout_user_use_case
+    get_logout_user_use_case,
+    get_update_user_use_case,
+    get_change_password_use_case
 )
 from src.infrastructure.web.mappers import UserMapper
 from src.infrastructure.web.security import (
@@ -124,7 +127,7 @@ async def logout(
 
 
 @router.get("/users/me", response_model=UserResponse)
-async def read_users_me(current_user: User = Depends(get_current_active_user)):
+async def read_users_me(current_user: User = Depends(get_current_user)):
     """Get current user information."""
     return UserMapper.to_response(current_user)
 
@@ -154,4 +157,81 @@ async def get_user(
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"User with id {user_id} not found"
+        )
+
+
+@router.put("/users/me", response_model=UserResponse)
+async def update_user_profile(
+    user_data: UserUpdate,
+    current_user: User = Depends(get_current_user),
+    update_user_use_case = Depends(get_update_user_use_case)
+):
+    """Update current user profile information."""
+    try:
+        # Validate password confirmation if provided
+        if hasattr(user_data, 'confirm_password') and user_data.new_password != user_data.confirm_password:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="New password and confirmation do not match"
+            )
+        
+        updated_user = await update_user_use_case.execute(
+            user_id=current_user.id,
+            username=user_data.username,
+            email=user_data.email
+        )
+        return UserMapper.to_response(updated_user)
+    except UserNotFoundError:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="User not found"
+        )
+    except UserAlreadyExistsError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e)
+        )
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to update user: {str(e)}"
+        )
+
+
+@router.put("/users/me/password", response_model=dict)
+async def change_password(
+    password_data: ChangePasswordRequest,
+    current_user: User = Depends(get_current_user),
+    change_password_use_case = Depends(get_change_password_use_case)
+):
+    """Change user password."""
+    try:
+        # Validate password confirmation
+        if password_data.new_password != password_data.confirm_password:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="New password and confirmation do not match"
+            )
+        
+        await change_password_use_case.execute(
+            user_id=current_user.id,
+            current_password=password_data.current_password,
+            new_password=password_data.new_password
+        )
+        
+        return {"message": "Password changed successfully"}
+    except UserNotFoundError:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="User not found"
+        )
+    except InvalidCredentialsError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e)
+        )
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to change password: {str(e)}"
         )

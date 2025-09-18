@@ -23,3 +23,8 @@ class UserAlreadyExistsError(BusinessRuleViolationError):
 class InactiveUserError(BusinessRuleViolationError):
     """Raised when trying to perform operations on an inactive user."""
     pass
+
+
+class InvalidCredentialsError(BusinessRuleViolationError):
+    """Raised when user credentials are invalid."""
+    pass

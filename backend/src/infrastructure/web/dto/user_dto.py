@@ -56,3 +56,10 @@ class LogoutResponse(BaseModel):
     """DTO for logout response."""
     message: str
     success: bool
+
+
+class ChangePasswordRequest(BaseModel):
+    """DTO for changing user password."""
+    current_password: str = Field(..., min_length=1)
+    new_password: str = Field(..., min_length=6)
+    confirm_password: str = Field(..., min_length=6)

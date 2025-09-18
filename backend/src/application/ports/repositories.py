@@ -47,3 +47,28 @@ class UserRepositoryPort(ABC):
     async def exists(self, user_id: str) -> bool:
         """Check if a user exists."""
         pass
+
+    @abstractmethod
+    async def get_by_id(self, user_id: str) -> Optional[User]:
+        """Get user by ID (alias for find_by_id)."""
+        pass
+
+    @abstractmethod
+    async def get_by_email(self, email: str) -> Optional[User]:
+        """Get user by email (alias for find_by_email)."""
+        pass
+
+    @abstractmethod
+    async def get_by_username(self, username: str) -> Optional[User]:
+        """Get user by username (alias for find_by_username)."""
+        pass
+
+    @abstractmethod
+    async def update_user(self, user_id: str, user_data: dict) -> User:
+        """Update user information."""
+        pass
+
+    @abstractmethod
+    async def update_user_password(self, user_id: str, hashed_password: str) -> User:
+        """Update user password."""
+        pass

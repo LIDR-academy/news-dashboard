@@ -11,6 +11,7 @@ import { queryClient } from "./core/data/queryClient";
 import LoginPage from "./pages/login.page";
 import RegisterPage from "./pages/register.page";
 import HomePage from "./pages/home.page";
+import { ProfileView, ProfileEdit, ChangePassword } from "./features/profile";
 
 function App() {
   return (
@@ -22,6 +23,9 @@ function App() {
               <Route path="/login" element={<LoginPage />} />
               <Route path="/register" element={<RegisterPage />} />
               <Route path="/home" element={<HomePage />} />
+              <Route path="/profile" element={<ProfileView />} />
+              <Route path="/profile/edit" element={<ProfileEdit />} />
+              <Route path="/profile/change-password" element={<ChangePassword />} />
               <Route path="/" element={<Navigate to="/login" replace />} />
             </Routes>
           </Router>
