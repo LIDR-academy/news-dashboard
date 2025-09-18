@@ -11,7 +11,8 @@ from src.infrastructure.web.dto.user_dto import (
     UserResponse,
     UserLogin,
     Token,
-    TokenData
+    TokenData,
+    LogoutResponse
 )
 
 
@@ -523,6 +524,196 @@ class TestTokenData:
 
 @pytest.mark.api
 @pytest.mark.unit
+class TestLogoutResponse:
+    """Test suite for LogoutResponse DTO."""
+
+    def test_logout_response_creation_with_valid_data_succeeds(self):
+        """Test that LogoutResponse can be created with valid data."""
+        # Arrange
+        data = {
+            "message": "Successfully logged out",
+            "success": True
+        }
+
+        # Act
+        logout_response = LogoutResponse(**data)
+
+        # Assert
+        assert logout_response.message == data["message"]
+        assert logout_response.success == data["success"]
+
+    def test_logout_response_creation_with_success_false_succeeds(self):
+        """Test that LogoutResponse can be created with success=False."""
+        # Arrange
+        data = {
+            "message": "Logout failed",
+            "success": False
+        }
+
+        # Act
+        logout_response = LogoutResponse(**data)
+
+        # Assert
+        assert logout_response.message == data["message"]
+        assert logout_response.success is False
+
+    def test_logout_response_missing_required_fields_raises_validation_error(self):
+        """Test that LogoutResponse raises ValidationError when required fields are missing."""
+        # Test missing message
+        with pytest.raises(ValidationError):
+            LogoutResponse(success=True)
+
+        # Test missing success
+        with pytest.raises(ValidationError):
+            LogoutResponse(message="test message")
+
+    def test_logout_response_with_empty_message_succeeds(self):
+        """Test that LogoutResponse accepts empty message (as per DTO definition)."""
+        # Act
+        logout_response = LogoutResponse(message="", success=True)
+
+        # Assert
+        assert logout_response.message == ""
+        assert logout_response.success is True
+
+    def test_logout_response_with_whitespace_message_succeeds(self):
+        """Test that LogoutResponse accepts whitespace-only message (as per DTO definition)."""
+        # Act
+        logout_response = LogoutResponse(message="   ", success=True)
+
+        # Assert
+        assert logout_response.message == "   "
+        assert logout_response.success is True
+
+    def test_logout_response_success_field_type_validation(self):
+        """Test that LogoutResponse validates success field type."""
+        # Test with non-boolean values that should be converted
+        valid_cases = [
+            (True, True),
+            (False, False),
+            (1, True),    # Should be converted to True
+            (0, False),   # Should be converted to False
+        ]
+
+        for input_value, expected in valid_cases:
+            logout_response = LogoutResponse(message="test", success=input_value)
+            assert logout_response.success is expected
+
+    def test_logout_response_serialization_to_dict(self):
+        """Test that LogoutResponse can be serialized to dictionary."""
+        # Arrange
+        data = {
+            "message": "Logout successful",
+            "success": True
+        }
+        logout_response = LogoutResponse(**data)
+
+        # Act
+        serialized = logout_response.model_dump()
+
+        # Assert
+        assert serialized == data
+
+    def test_logout_response_json_serialization(self):
+        """Test that LogoutResponse can be serialized to JSON."""
+        # Arrange
+        data = {
+            "message": "User logged out successfully",
+            "success": True
+        }
+        logout_response = LogoutResponse(**data)
+
+        # Act
+        json_str = logout_response.model_dump_json()
+
+        # Assert
+        assert isinstance(json_str, str)
+        assert "User logged out successfully" in json_str
+        assert "true" in json_str.lower()  # JSON boolean representation
+
+    def test_logout_response_round_trip_serialization(self):
+        """Test round-trip serialization (create -> serialize -> deserialize)."""
+        # Arrange
+        original_data = {
+            "message": "Operation completed",
+            "success": False
+        }
+        original_response = LogoutResponse(**original_data)
+
+        # Act - Serialize and deserialize
+        serialized = original_response.model_dump()
+        recreated_response = LogoutResponse(**serialized)
+
+        # Assert
+        assert original_response.message == recreated_response.message
+        assert original_response.success == recreated_response.success
+        assert original_response.model_dump() == recreated_response.model_dump()
+
+    @pytest.mark.parametrize("message,success,expected_valid", [
+        ("Successfully logged out", True, True),
+        ("Logout failed due to server error", False, True),
+        ("User not found", False, True),
+        ("Token invalidated", True, True),
+        ("", True, True),  # Empty message is actually valid per DTO definition
+        ("   ", False, True),  # Whitespace only is actually valid per DTO definition
+        ("Valid message", "not_boolean", False),  # Non-boolean string will fail validation
+    ])
+    def test_logout_response_validation_scenarios(self, message, success, expected_valid):
+        """Test LogoutResponse validation with various input scenarios."""
+        if expected_valid:
+            # Should succeed
+            logout_response = LogoutResponse(message=message, success=success)
+            assert logout_response.message == message
+            # success might be converted to boolean
+            assert isinstance(logout_response.success, bool)
+        else:
+            # Should raise ValidationError
+            with pytest.raises(ValidationError):
+                LogoutResponse(message=message, success=success)
+
+    def test_logout_response_field_constraints(self):
+        """Test LogoutResponse field constraints and validation."""
+        # Test very long message (should be accepted)
+        long_message = "A" * 1000
+        logout_response = LogoutResponse(message=long_message, success=True)
+        assert logout_response.message == long_message
+
+        # Test message with special characters
+        special_message = "Logout failed: User@domain.com (ID: 12345) - Error #500!"
+        logout_response = LogoutResponse(message=special_message, success=False)
+        assert logout_response.message == special_message
+
+    def test_logout_response_typical_use_cases(self):
+        """Test LogoutResponse with typical real-world messages."""
+        # Success scenarios
+        success_cases = [
+            "Successfully logged out",
+            "User session terminated",
+            "Logout completed successfully",
+            "Token invalidated and user logged out"
+        ]
+
+        for message in success_cases:
+            logout_response = LogoutResponse(message=message, success=True)
+            assert logout_response.success is True
+            assert logout_response.message == message
+
+        # Failure scenarios
+        failure_cases = [
+            "User not found",
+            "Logout failed: Database error",
+            "Session already expired",
+            "Invalid token provided"
+        ]
+
+        for message in failure_cases:
+            logout_response = LogoutResponse(message=message, success=False)
+            assert logout_response.success is False
+            assert logout_response.message == message
+
+
+@pytest.mark.api
+@pytest.mark.unit
 class TestUserDTOsIntegration:
     """Integration tests for User DTOs."""
 
@@ -588,7 +779,8 @@ class TestUserDTOsIntegration:
             ),
             UserLogin(username="testuser", password="password123"),
             Token(access_token="sample.token"),
-            TokenData(username="testuser")
+            TokenData(username="testuser"),
+            LogoutResponse(message="Successfully logged out", success=True)
         ]
         
         # Act & Assert
@@ -606,7 +798,8 @@ class TestUserDTOsIntegration:
         (UserCreate, {"email": "test@example.com", "username": "testuser", "password": "password123"}),
         (UserLogin, {"username": "testuser", "password": "password123"}),
         (Token, {"access_token": "sample.token"}),
-        (TokenData, {"username": "testuser"})
+        (TokenData, {"username": "testuser"}),
+        (LogoutResponse, {"message": "Successfully logged out", "success": True})
     ])
     def test_dto_round_trip_serialization(self, dto_class, test_data):
         """Test round-trip serialization (create -> serialize -> deserialize)."""

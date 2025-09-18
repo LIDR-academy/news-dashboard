@@ -3,11 +3,24 @@ import { renderHook, waitFor } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import React, { type ReactNode } from 'react'
 import { useLogoutMutation } from '../../mutations/useLogout.mutation'
-import { cleanup } from '@/test-utils/mocks'
+import { cleanup, createMockAxiosError } from '@/test-utils/mocks'
+
+// Mock auth service at module level
+vi.mock('../../../data/auth.service', () => ({
+  authService: {
+    logout: vi.fn()
+  }
+}))
+
+import { authService } from '../../../data/auth.service'
 
 describe('useLogoutMutation', () => {
   let queryClient: QueryClient
   let clearSpy: ReturnType<typeof vi.spyOn>
+  let consoleErrorSpy: ReturnType<typeof vi.spyOn>
+
+  // Type cast to access mocked methods
+  const mockAuthService = authService as any
 
   beforeEach(() => {
     queryClient = new QueryClient({
@@ -16,16 +29,23 @@ describe('useLogoutMutation', () => {
         mutations: { retry: false }
       }
     })
-    
+
     // Spy on queryClient.clear method
     clearSpy = vi.spyOn(queryClient, 'clear').mockImplementation(() => {})
-    
+
+    // Spy on console.error to test error logging
+    consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+
+    // Reset auth service mocks
+    mockAuthService.logout.mockResolvedValue('Logout successful')
+
     vi.clearAllMocks()
   })
 
   afterEach(() => {
     cleanup.all()
     clearSpy.mockRestore()
+    consoleErrorSpy.mockRestore()
   })
 
   const createWrapper = ({ children }: { children: ReactNode }) => (
@@ -41,9 +61,10 @@ describe('useLogoutMutation', () => {
       })
 
       expect(result.current).toEqual({
-        logout: expect.any(Function),
+        action: expect.any(Function),
         isLoading: expect.any(Boolean),
-        error: null
+        error: null,
+        isSuccess: expect.any(Boolean)
       })
     })
 
@@ -52,29 +73,31 @@ describe('useLogoutMutation', () => {
         wrapper: createWrapper
       })
 
-      expect(result.current.logout).toBeInstanceOf(Function)
+      expect(result.current.action).toBeInstanceOf(Function)
       expect(result.current.isLoading).toBe(false)
       expect(result.current.error).toBe(null)
+      expect(result.current.isSuccess).toBe(false)
     })
 
-    it('should use mutateAsync for logout function (not mutate)', () => {
+    it('should use mutateAsync for action function (not mutate)', () => {
       const { result } = renderHook(() => useLogoutMutation(), {
         wrapper: createWrapper
       })
 
-      // The logout function should be mutateAsync (bound function) to return a promise
-      expect(typeof result.current.logout).toBe('function')
+      // The action function should be mutateAsync (bound function) to return a promise
+      expect(typeof result.current.action).toBe('function')
     })
   })
 
   describe('Successful Logout', () => {
-    it('should successfully clear query cache on logout', async () => {
+    it('should call authService.logout and clear query cache on successful logout', async () => {
       const { result } = renderHook(() => useLogoutMutation(), {
         wrapper: createWrapper
       })
 
-      await result.current.logout()
+      await result.current.action()
 
+      expect(mockAuthService.logout).toHaveBeenCalledTimes(1)
       expect(clearSpy).toHaveBeenCalledTimes(1)
     })
 
@@ -83,105 +106,145 @@ describe('useLogoutMutation', () => {
         wrapper: createWrapper
       })
 
-      await expect(result.current.logout()).resolves.toBeUndefined()
+      await expect(result.current.action()).resolves.toBeUndefined()
 
       expect(result.current.error).toBe(null)
       expect(result.current.isLoading).toBe(false)
+      expect(mockAuthService.logout).toHaveBeenCalledTimes(1)
     })
 
     it('should set loading state correctly during mutation', async () => {
-      // Mock queryClient.clear to take some time
-      clearSpy.mockImplementation(
-        () => new Promise(resolve => setTimeout(resolve, 100))
+      // Mock authService.logout to take some time
+      mockAuthService.logout.mockImplementation(
+        () => new Promise(resolve => setTimeout(() => resolve('Success'), 50))
       )
 
       const { result } = renderHook(() => useLogoutMutation(), {
         wrapper: createWrapper
       })
 
-      // Note: Due to the sync nature of queryClient.clear(),
-      // the loading state might not be observable in this test
-      const logoutPromise = result.current.logout()
-      
+      const logoutPromise = result.current.action()
+
       // The function should return a promise
       expect(logoutPromise).toBeInstanceOf(Promise)
-      
+
       await logoutPromise
 
       // Loading should be false after completion
-      expect(result.current.isLoading).toBe(false)
+      await waitFor(() => {
+        expect(result.current.isLoading).toBe(false)
+      })
+      expect(mockAuthService.logout).toHaveBeenCalledTimes(1)
     })
 
-    it('should call onSuccess callback after successful logout', async () => {
+    it('should set isSuccess to true after successful logout', async () => {
       const { result } = renderHook(() => useLogoutMutation(), {
         wrapper: createWrapper
       })
 
-      // The mutation should complete successfully
-      await result.current.logout()
+      await result.current.action()
 
-      expect(clearSpy).toHaveBeenCalled()
+      await waitFor(() => {
+        expect(result.current.isSuccess).toBe(true)
+      })
+      expect(result.current.error).toBe(null)
+      expect(mockAuthService.logout).toHaveBeenCalledTimes(1)
+      expect(clearSpy).toHaveBeenCalledTimes(1)
+    })
+
+    it('should call onSuccess callback after successful backend logout', async () => {
+      const { result } = renderHook(() => useLogoutMutation(), {
+        wrapper: createWrapper
+      })
+
+      await result.current.action()
+
+      expect(mockAuthService.logout).toHaveBeenCalledTimes(1)
+      expect(clearSpy).toHaveBeenCalledTimes(1)
       expect(result.current.error).toBe(null)
     })
   })
 
   describe('Error Handling', () => {
-    it('should handle queryClient.clear errors gracefully', async () => {
-      const clearError = new Error('Failed to clear cache')
-      clearSpy.mockImplementation(() => {
-        throw clearError
-      })
+    it('should clear cache even when backend logout fails (graceful fallback)', async () => {
+      const backendError = createMockAxiosError('Backend logout failed', 500)
+      mockAuthService.logout.mockRejectedValue(backendError)
 
       const { result } = renderHook(() => useLogoutMutation(), {
         wrapper: createWrapper
       })
 
-      await expect(result.current.logout()).rejects.toThrow('Failed to clear cache')
+      // mutateAsync will throw but onError still clears cache
+      await expect(result.current.action()).rejects.toThrow('Backend logout failed')
 
-      await waitFor(() => {
-        expect(result.current.error).toBeTruthy()
-        expect(result.current.isLoading).toBe(false)
-      })
+      expect(mockAuthService.logout).toHaveBeenCalledTimes(1)
+      expect(clearSpy).toHaveBeenCalledTimes(1) // Cache still cleared via onError
+      expect(consoleErrorSpy).toHaveBeenCalledWith('Logout error:', backendError)
     })
 
-    it('should handle async queryClient.clear errors', async () => {
-      const clearError = new Error('Async clear failed')
-      clearSpy.mockImplementation(() => {
-        throw clearError
-      })
+    it('should handle 401 unauthorized errors from backend', async () => {
+      const unauthorizedError = createMockAxiosError('Unauthorized', 401)
+      mockAuthService.logout.mockRejectedValue(unauthorizedError)
 
       const { result } = renderHook(() => useLogoutMutation(), {
         wrapper: createWrapper
       })
 
-      await expect(result.current.logout()).rejects.toThrow('Async clear failed')
+      await expect(result.current.action()).rejects.toThrow('Unauthorized')
 
-      await waitFor(() => {
-        expect(result.current.error).toBeTruthy()
-        expect(result.current.isLoading).toBe(false)
-      })
+      expect(mockAuthService.logout).toHaveBeenCalledTimes(1)
+      expect(clearSpy).toHaveBeenCalledTimes(1)
+      expect(consoleErrorSpy).toHaveBeenCalledWith('Logout error:', unauthorizedError)
     })
 
-    it('should handle memory-related cache clear errors', async () => {
-      const memoryError = new Error('Out of memory during cache clear')
-      clearSpy.mockImplementation(() => {
-        throw memoryError
-      })
+    it('should handle 404 not found errors from backend', async () => {
+      const notFoundError = createMockAxiosError('Endpoint not found', 404)
+      mockAuthService.logout.mockRejectedValue(notFoundError)
 
       const { result } = renderHook(() => useLogoutMutation(), {
         wrapper: createWrapper
       })
 
-      await expect(result.current.logout()).rejects.toThrow('Out of memory during cache clear')
+      await expect(result.current.action()).rejects.toThrow('Endpoint not found')
 
-      await waitFor(() => {
-        expect(result.current.error).toBeTruthy()
+      expect(mockAuthService.logout).toHaveBeenCalledTimes(1)
+      expect(clearSpy).toHaveBeenCalledTimes(1)
+      expect(consoleErrorSpy).toHaveBeenCalledWith('Logout error:', notFoundError)
+    })
+
+    it('should handle network errors gracefully', async () => {
+      const networkError = new Error('Network Error')
+      mockAuthService.logout.mockRejectedValue(networkError)
+
+      const { result } = renderHook(() => useLogoutMutation(), {
+        wrapper: createWrapper
       })
+
+      await expect(result.current.action()).rejects.toThrow('Network Error')
+
+      expect(mockAuthService.logout).toHaveBeenCalledTimes(1)
+      expect(clearSpy).toHaveBeenCalledTimes(1)
+      expect(consoleErrorSpy).toHaveBeenCalledWith('Logout error:', networkError)
+    })
+
+    it('should handle timeout errors from backend', async () => {
+      const timeoutError = createMockAxiosError('Request timeout', 408)
+      mockAuthService.logout.mockRejectedValue(timeoutError)
+
+      const { result } = renderHook(() => useLogoutMutation(), {
+        wrapper: createWrapper
+      })
+
+      await expect(result.current.action()).rejects.toThrow('Request timeout')
+
+      expect(mockAuthService.logout).toHaveBeenCalledTimes(1)
+      expect(clearSpy).toHaveBeenCalledTimes(1)
+      expect(consoleErrorSpy).toHaveBeenCalledWith('Logout error:', timeoutError)
     })
   })
 
   describe('Query Cache Integration', () => {
-    it('should clear all cached queries and mutations', async () => {
+    it('should clear all cached queries and mutations after successful backend logout', async () => {
       // Add some data to the cache
       queryClient.setQueryData(['users'], { data: 'user data' })
       queryClient.setQueryData(['products'], { data: 'product data' })
@@ -191,12 +254,30 @@ describe('useLogoutMutation', () => {
         wrapper: createWrapper
       })
 
-      await result.current.logout()
+      await result.current.action()
 
+      expect(mockAuthService.logout).toHaveBeenCalledTimes(1)
       expect(clearSpy).toHaveBeenCalledTimes(1)
-      
+
       // Verify clear was called on the correct queryClient instance
       expect(clearSpy).toHaveBeenCalledWith()
+    })
+
+    it('should clear cache even when backend call fails', async () => {
+      const backendError = createMockAxiosError('Backend error', 500)
+      mockAuthService.logout.mockRejectedValue(backendError)
+
+      // Add some data to the cache
+      queryClient.setQueryData(['sensitive-data'], { token: 'secret' })
+
+      const { result } = renderHook(() => useLogoutMutation(), {
+        wrapper: createWrapper
+      })
+
+      await expect(result.current.action()).rejects.toThrow('Backend error')
+
+      expect(mockAuthService.logout).toHaveBeenCalledTimes(1)
+      expect(clearSpy).toHaveBeenCalledTimes(1) // Cache still cleared for security
     })
 
     it('should not interfere with new queries after logout', async () => {
@@ -204,7 +285,7 @@ describe('useLogoutMutation', () => {
         wrapper: createWrapper
       })
 
-      await result.current.logout()
+      await result.current.action()
 
       // After logout, new queries should still work
       queryClient.setQueryData(['new-data'], { data: 'new data after logout' })
@@ -225,8 +306,9 @@ describe('useLogoutMutation', () => {
         wrapper: createWrapper
       })
 
-      await result.current.logout()
+      await result.current.action()
 
+      expect(mockAuthService.logout).toHaveBeenCalledTimes(1)
       expect(clearSpy).toHaveBeenCalledTimes(1)
     })
   })
@@ -238,15 +320,18 @@ describe('useLogoutMutation', () => {
       })
 
       // First logout
-      await result.current.logout()
+      await result.current.action()
+      expect(mockAuthService.logout).toHaveBeenCalledTimes(1)
       expect(clearSpy).toHaveBeenCalledTimes(1)
 
       // Second logout
-      await result.current.logout()
+      await result.current.action()
+      expect(mockAuthService.logout).toHaveBeenCalledTimes(2)
       expect(clearSpy).toHaveBeenCalledTimes(2)
 
       // Third logout
-      await result.current.logout()
+      await result.current.action()
+      expect(mockAuthService.logout).toHaveBeenCalledTimes(3)
       expect(clearSpy).toHaveBeenCalledTimes(3)
     })
 
@@ -257,26 +342,27 @@ describe('useLogoutMutation', () => {
 
       // Make multiple concurrent calls
       const promises = [
-        result.current.logout(),
-        result.current.logout(),
-        result.current.logout()
+        result.current.action(),
+        result.current.action(),
+        result.current.action()
       ]
 
       await Promise.all(promises)
 
+      expect(mockAuthService.logout).toHaveBeenCalledTimes(3)
       expect(clearSpy).toHaveBeenCalledTimes(3)
     })
 
     it('should handle mixed success and failure scenarios', async () => {
       let callCount = 0
-      clearSpy.mockImplementation(() => {
+      mockAuthService.logout.mockImplementation(() => {
         callCount++
         if (callCount === 1) {
-          return Promise.resolve()
+          return Promise.resolve('Success')
         } else if (callCount === 2) {
-          throw new Error('Second call fails')
+          return Promise.reject(createMockAxiosError('Backend error', 500))
         } else {
-          return Promise.resolve()
+          return Promise.resolve('Success again')
         }
       })
 
@@ -285,20 +371,19 @@ describe('useLogoutMutation', () => {
       })
 
       // First call should succeed
-      await result.current.logout()
-      expect(result.current.error).toBe(null)
+      await result.current.action()
+      expect(clearSpy).toHaveBeenCalledTimes(1)
 
-      // Second call should fail
-      await expect(result.current.logout()).rejects.toThrow('Second call fails')
-      await waitFor(() => {
-        expect(result.current.error).toBeTruthy()
-      })
+      // Second call should fail but still clear cache
+      await expect(result.current.action()).rejects.toThrow('Backend error')
+      expect(clearSpy).toHaveBeenCalledTimes(2)
+      expect(consoleErrorSpy).toHaveBeenCalledWith('Logout error:', expect.any(Error))
 
       // Third call should succeed again
-      await result.current.logout()
-      // Note: error might still be from previous failed mutation in React Query
-      
+      await result.current.action()
       expect(clearSpy).toHaveBeenCalledTimes(3)
+
+      expect(mockAuthService.logout).toHaveBeenCalledTimes(3)
     })
   })
 
@@ -309,10 +394,11 @@ describe('useLogoutMutation', () => {
       })
 
       // mutateAsync returns a promise, mutate does not
-      const logoutResult = result.current.logout()
+      const logoutResult = result.current.action()
       expect(logoutResult).toBeInstanceOf(Promise)
 
       await logoutResult
+      expect(mockAuthService.logout).toHaveBeenCalledTimes(1)
     })
 
     it('should have access to React Query mutation state', async () => {
@@ -323,8 +409,9 @@ describe('useLogoutMutation', () => {
       // Initially idle
       expect(result.current.isLoading).toBe(false)
       expect(result.current.error).toBe(null)
+      expect(result.current.isSuccess).toBe(false)
 
-      const logoutPromise = result.current.logout()
+      const logoutPromise = result.current.action()
 
       // Should show loading during execution
       await waitFor(() => {
@@ -337,6 +424,9 @@ describe('useLogoutMutation', () => {
 
       // Should return to idle after completion
       expect(result.current.isLoading).toBe(false)
+      await waitFor(() => {
+        expect(result.current.isSuccess).toBe(true)
+      })
     })
 
     it('should maintain mutation instance across re-renders', () => {
@@ -344,12 +434,27 @@ describe('useLogoutMutation', () => {
         wrapper: createWrapper
       })
 
-      const firstInstance = result.current.logout
+      const firstInstance = result.current.action
       rerender()
-      const secondInstance = result.current.logout
+      const secondInstance = result.current.action
 
       // Function instances should be stable across re-renders
       expect(firstInstance).toBe(secondInstance)
+    })
+
+    it('should export correct interface properties', () => {
+      const { result } = renderHook(() => useLogoutMutation(), {
+        wrapper: createWrapper
+      })
+
+      // Verify interface matches useLogoutMutation return type
+      expect(result.current).toHaveProperty('action')
+      expect(result.current).toHaveProperty('isLoading')
+      expect(result.current).toHaveProperty('error')
+      expect(result.current).toHaveProperty('isSuccess')
+
+      // Should not have the old 'logout' property
+      expect(result.current).not.toHaveProperty('logout')
     })
   })
 
@@ -362,17 +467,46 @@ describe('useLogoutMutation', () => {
       })
 
       // Even with a mocked clear that might fail, the structure should be maintained
-      expect(result.current.logout).toBeInstanceOf(Function)
+      expect(result.current.action).toBeInstanceOf(Function)
       expect(result.current.isLoading).toBe(false)
       expect(result.current.error).toBe(null)
+      expect(result.current.isSuccess).toBe(false)
     })
 
+    it('should prioritize local security over backend errors', async () => {
+      // Even if backend fails, we should clear local cache for security
+      const backendError = createMockAxiosError('Server unavailable', 503)
+      mockAuthService.logout.mockRejectedValue(backendError)
+
+      const { result } = renderHook(() => useLogoutMutation(), {
+        wrapper: createWrapper
+      })
+
+      await expect(result.current.action()).rejects.toThrow('Server unavailable')
+
+      expect(mockAuthService.logout).toHaveBeenCalledTimes(1)
+      expect(clearSpy).toHaveBeenCalledTimes(1) // Local cache cleared despite backend error
+      expect(consoleErrorSpy).toHaveBeenCalledWith('Logout error:', backendError)
+    })
+
+    it('should handle malformed response from backend', async () => {
+      mockAuthService.logout.mockResolvedValue(null as any) // Malformed response
+
+      const { result } = renderHook(() => useLogoutMutation(), {
+        wrapper: createWrapper
+      })
+
+      await result.current.action()
+
+      expect(mockAuthService.logout).toHaveBeenCalledTimes(1)
+      expect(clearSpy).toHaveBeenCalledTimes(1)
+      expect(result.current.error).toBe(null) // Should not error on malformed success response
+    })
 
     it('should not have side effects when mutation fails', async () => {
-      const originalState = { isLoading: false, error: null }
-      clearSpy.mockImplementation(() => {
-        throw new Error('Clear failed')
-      })
+      const originalState = { isLoading: false, error: null, isSuccess: false }
+      const backendError = createMockAxiosError('Backend error', 500)
+      mockAuthService.logout.mockRejectedValue(backendError)
 
       const { result } = renderHook(() => useLogoutMutation(), {
         wrapper: createWrapper
@@ -381,12 +515,14 @@ describe('useLogoutMutation', () => {
       // Capture pre-logout state
       expect(result.current.isLoading).toBe(originalState.isLoading)
       expect(result.current.error).toBe(originalState.error)
+      expect(result.current.isSuccess).toBe(originalState.isSuccess)
 
-      // Attempt logout
-      await expect(result.current.logout()).rejects.toThrow('Clear failed')
+      // Attempt logout - will throw but onError still clears cache
+      await expect(result.current.action()).rejects.toThrow('Backend error')
 
-      // Verify we're back to non-loading state (error state is expected)
+      // Verify we're back to non-loading state
       expect(result.current.isLoading).toBe(false)
+      expect(clearSpy).toHaveBeenCalledTimes(1) // Cache still cleared
     })
   })
 })

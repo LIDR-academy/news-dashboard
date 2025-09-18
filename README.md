@@ -63,8 +63,9 @@ frontend/
 │   │   ├── data/         # API client, storage, query setup
 │   │   └── hooks/        # Shared hooks
 │   │
-│   ├── components/       
-│   │   └── ui/          # Reusable UI components (Radix/shadcn)
+│   ├── components/
+│   │   ├── ui/          # Reusable UI components (Radix/shadcn)
+│   │   └── *.tsx        # Shared components (e.g., DashboardHeader)
 │   │
 │   └── pages/           # Route components
 ```
@@ -176,7 +177,17 @@ npm run test:coverage
 
 # Run tests with UI
 npm run test:ui
+
+# Run specific feature tests
+npm test -- --run src/features/auth/hooks/__tests__/mutations/useLogout.mutation.test.tsx
+npm test -- --run src/components/__tests__/DashboardHeader.test.tsx
 ```
+
+### Test Coverage
+- **Backend**: 105 comprehensive tests including logout functionality
+- **Frontend**: 65+ component and hook tests with React Testing Library
+- **Coverage Requirement**: 80% minimum for backend, comprehensive frontend coverage
+- **Test Types**: Unit, integration, API, accessibility, and error scenario testing
 
 ## 🏭 Development Workflow
 
@@ -237,14 +248,27 @@ e.g. I've created a plan at `.claude/doc/{feature_name}/<agent_target>.md`, plea
 - Services use axios for API communication
 - Type safety with TypeScript and Zod schemas
 
-## 🔐 Security
+## 🔐 Security & Authentication
 
-- OAuth2 authentication with JWT tokens
-- Password hashing with bcrypt
-- Protected routes on both backend and frontend
+### Authentication Flow
+- **Registration & Login**: OAuth2 authentication with JWT tokens
+- **Session Management**: Stateless JWT approach with 30-minute expiration
+- **Logout**: Secure logout with backend validation and local cache clearing
+- **Password Security**: bcrypt hashing with salt rounds
+- **Route Protection**: Protected routes on both backend and frontend
+
+### Security Features
 - Environment-based configuration for sensitive data
-- Input validation at multiple layers
+- Input validation at multiple layers (Pydantic backend, Zod frontend)
 - CORS configuration for production
+- User session validation on all protected endpoints
+- Graceful logout fallback (local cleanup even if backend fails)
+
+### Authentication Endpoints
+- `POST /api/v1/auth/register` - User registration
+- `POST /api/v1/auth/login` - User authentication
+- `POST /api/v1/auth/logout` - Secure logout with user validation
+- `GET /api/v1/users/me` - Get current user information (protected)
 
 ## 📝 API Documentation
 

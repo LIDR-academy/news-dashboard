@@ -8,7 +8,7 @@ from fastapi.testclient import TestClient
 
 from src.domain.entities.user import User
 from src.domain.exceptions.user import UserNotFoundError, UserAlreadyExistsError
-from src.infrastructure.web.dto.user_dto import Token, UserResponse
+from src.infrastructure.web.dto.user_dto import Token, UserResponse, LogoutResponse
 from src.infrastructure.web.routers.users import router
 
 
@@ -35,7 +35,8 @@ def mock_use_cases():
         "authenticate_user": AsyncMock(),
         "get_all_users": AsyncMock(),
         "get_user_by_id": AsyncMock(),
-        "get_current_user": AsyncMock()
+        "get_current_user": AsyncMock(),
+        "logout_user": AsyncMock()
     }
 
 
@@ -539,6 +540,259 @@ class TestGetUserByIdEndpoint:
 
 @pytest.mark.api
 @pytest.mark.unit
+@pytest.mark.auth
+class TestLogoutEndpoint:
+    """Test suite for user logout endpoint."""
+
+    def test_logout_with_valid_user_returns_success_response(
+        self, test_app, user_entity_with_id
+    ):
+        """Test successful logout returns success response."""
+        # Arrange - Mock dependencies using FastAPI's dependency override
+        from src.infrastructure.web.dependencies import get_logout_user_use_case, get_current_active_user
+
+        # Mock current user dependency to return user dict (as router expects)
+        current_user_dict = {"id": user_entity_with_id.id, "email": user_entity_with_id.email}
+
+        mock_logout_use_case = AsyncMock()
+        mock_logout_use_case.execute.return_value = True
+
+        # Override dependencies
+        test_app.dependency_overrides[get_logout_user_use_case] = lambda: mock_logout_use_case
+        test_app.dependency_overrides[get_current_active_user] = lambda: current_user_dict
+
+        client = TestClient(test_app)
+
+        # Act
+        response = client.post("/api/v1/auth/logout")
+
+        # Assert
+        assert response.status_code == status.HTTP_200_OK
+        data = response.json()
+        assert data["message"] == "Successfully logged out"
+        assert data["success"] is True
+
+        # Verify use case was called with correct user ID
+        mock_logout_use_case.execute.assert_called_once_with(user_entity_with_id.id)
+
+    def test_logout_with_nonexistent_user_returns_404(
+        self, test_app, user_entity_with_id
+    ):
+        """Test logout with nonexistent user returns 404 Not Found."""
+        # Arrange - Mock dependencies using FastAPI's dependency override
+        from src.infrastructure.web.dependencies import get_logout_user_use_case, get_current_active_user
+
+        current_user_dict = {"id": "nonexistent_id", "email": "test@example.com"}
+
+        mock_logout_use_case = AsyncMock()
+        mock_logout_use_case.execute.side_effect = UserNotFoundError("nonexistent_id")
+
+        # Override dependencies
+        test_app.dependency_overrides[get_logout_user_use_case] = lambda: mock_logout_use_case
+        test_app.dependency_overrides[get_current_active_user] = lambda: current_user_dict
+
+        client = TestClient(test_app)
+
+        # Act
+        response = client.post("/api/v1/auth/logout")
+
+        # Assert
+        assert response.status_code == status.HTTP_404_NOT_FOUND
+        data = response.json()
+        assert "User not found" in data["detail"]
+
+    def test_logout_without_auth_returns_401(
+        self, test_app
+    ):
+        """Test logout without authentication returns 401 Unauthorized."""
+        # Arrange - Mock dependencies using FastAPI's dependency override
+        from src.infrastructure.web.dependencies import get_current_active_user
+        from fastapi import HTTPException, status as http_status
+
+        def mock_auth_failure():
+            raise HTTPException(
+                status_code=http_status.HTTP_401_UNAUTHORIZED,
+                detail="Could not validate credentials"
+            )
+
+        # Override dependencies
+        test_app.dependency_overrides[get_current_active_user] = mock_auth_failure
+
+        client = TestClient(test_app)
+
+        # Act
+        response = client.post("/api/v1/auth/logout")
+
+        # Assert
+        assert response.status_code == status.HTTP_401_UNAUTHORIZED
+
+    def test_logout_with_server_error_returns_500(
+        self, test_app, user_entity_with_id
+    ):
+        """Test logout with server error returns 500 Internal Server Error."""
+        # Arrange - Mock dependencies using FastAPI's dependency override
+        from src.infrastructure.web.dependencies import get_logout_user_use_case, get_current_active_user
+
+        current_user_dict = {"id": user_entity_with_id.id, "email": user_entity_with_id.email}
+
+        mock_logout_use_case = AsyncMock()
+        mock_logout_use_case.execute.side_effect = Exception("Database connection failed")
+
+        # Override dependencies
+        test_app.dependency_overrides[get_logout_user_use_case] = lambda: mock_logout_use_case
+        test_app.dependency_overrides[get_current_active_user] = lambda: current_user_dict
+
+        client = TestClient(test_app)
+
+        # Act
+        response = client.post("/api/v1/auth/logout")
+
+        # Assert
+        assert response.status_code == status.HTTP_500_INTERNAL_SERVER_ERROR
+        data = response.json()
+        assert "Logout failed" in data["detail"]
+
+    def test_logout_endpoint_requires_post_method(
+        self, test_app, user_entity_with_id
+    ):
+        """Test that logout endpoint only accepts POST method."""
+        # Arrange - Mock dependencies using FastAPI's dependency override
+        from src.infrastructure.web.dependencies import get_current_active_user
+
+        current_user_dict = {"id": user_entity_with_id.id, "email": user_entity_with_id.email}
+
+        # Override dependencies
+        test_app.dependency_overrides[get_current_active_user] = lambda: current_user_dict
+
+        client = TestClient(test_app)
+
+        # Act & Assert - Test unsupported methods
+        response_get = client.get("/api/v1/auth/logout")
+        assert response_get.status_code == status.HTTP_405_METHOD_NOT_ALLOWED
+
+        response_put = client.put("/api/v1/auth/logout")
+        assert response_put.status_code == status.HTTP_405_METHOD_NOT_ALLOWED
+
+        response_delete = client.delete("/api/v1/auth/logout")
+        assert response_delete.status_code == status.HTTP_405_METHOD_NOT_ALLOWED
+
+    def test_logout_response_model_structure(
+        self, test_app, user_entity_with_id
+    ):
+        """Test logout endpoint returns correct response model structure."""
+        # Arrange - Mock dependencies using FastAPI's dependency override
+        from src.infrastructure.web.dependencies import get_logout_user_use_case, get_current_active_user
+
+        current_user_dict = {"id": user_entity_with_id.id, "email": user_entity_with_id.email}
+
+        mock_logout_use_case = AsyncMock()
+        mock_logout_use_case.execute.return_value = True
+
+        # Override dependencies
+        test_app.dependency_overrides[get_logout_user_use_case] = lambda: mock_logout_use_case
+        test_app.dependency_overrides[get_current_active_user] = lambda: current_user_dict
+
+        client = TestClient(test_app)
+
+        # Act
+        response = client.post("/api/v1/auth/logout")
+
+        # Assert
+        assert response.status_code == status.HTTP_200_OK
+        data = response.json()
+
+        # Verify LogoutResponse model structure
+        assert "message" in data
+        assert "success" in data
+        assert isinstance(data["message"], str)
+        assert isinstance(data["success"], bool)
+        assert data["success"] is True
+
+    def test_logout_with_inactive_user_still_succeeds(
+        self, test_app, user_entity_with_id
+    ):
+        """Test logout with inactive user still succeeds."""
+        # Arrange - Mock dependencies using FastAPI's dependency override
+        from src.infrastructure.web.dependencies import get_logout_user_use_case, get_current_active_user
+
+        # Create inactive user dict
+        user_entity_with_id.is_active = False
+        current_user_dict = {"id": user_entity_with_id.id, "email": user_entity_with_id.email}
+
+        mock_logout_use_case = AsyncMock()
+        mock_logout_use_case.execute.return_value = True  # Use case handles inactive users
+
+        # Override dependencies
+        test_app.dependency_overrides[get_logout_user_use_case] = lambda: mock_logout_use_case
+        test_app.dependency_overrides[get_current_active_user] = lambda: current_user_dict
+
+        client = TestClient(test_app)
+
+        # Act
+        response = client.post("/api/v1/auth/logout")
+
+        # Assert
+        assert response.status_code == status.HTTP_200_OK
+        data = response.json()
+        assert data["success"] is True
+
+    @pytest.mark.asyncio
+    async def test_logout_use_case_integration_with_current_user(self, mock_user_repository, user_entity_with_id):
+        """Test logout use case integration with current user dependency."""
+        # This tests the integration between the use case and the endpoint dependency
+        from src.application.use_cases.user_use_cases import LogoutUserUseCase
+
+        # Arrange
+        mock_user_repository.find_by_id.return_value = user_entity_with_id
+        logout_use_case = LogoutUserUseCase(mock_user_repository)
+
+        # Act
+        result = await logout_use_case.execute(user_entity_with_id.id)
+
+        # Assert
+        assert result is True
+        mock_user_repository.find_by_id.assert_called_once_with(user_entity_with_id.id)
+
+    def test_logout_endpoint_error_handling_coverage(
+        self, test_app, user_entity_with_id
+    ):
+        """Test logout endpoint handles various error scenarios properly."""
+        # Arrange - Mock dependencies using FastAPI's dependency override
+        from src.infrastructure.web.dependencies import get_logout_user_use_case, get_current_active_user
+
+        current_user_dict = {"id": user_entity_with_id.id, "email": user_entity_with_id.email}
+
+        # Test different exception types
+        exception_scenarios = [
+            (UserNotFoundError("test_id"), status.HTTP_404_NOT_FOUND, "User not found"),
+            (ValueError("Invalid user ID"), status.HTTP_500_INTERNAL_SERVER_ERROR, "Logout failed"),
+            (RuntimeError("Service unavailable"), status.HTTP_500_INTERNAL_SERVER_ERROR, "Logout failed"),
+        ]
+
+        for exception, expected_status, expected_detail in exception_scenarios:
+            # Clear any existing overrides
+            test_app.dependency_overrides.clear()
+
+            mock_logout_use_case = AsyncMock()
+            mock_logout_use_case.execute.side_effect = exception
+
+            # Override dependencies
+            test_app.dependency_overrides[get_logout_user_use_case] = lambda: mock_logout_use_case
+            test_app.dependency_overrides[get_current_active_user] = lambda: current_user_dict
+
+            client = TestClient(test_app)
+
+            # Act
+            response = client.post("/api/v1/auth/logout")
+
+            # Assert
+            assert response.status_code == expected_status
+            data = response.json()
+            assert expected_detail in data["detail"]
+
+
+@pytest.mark.api
+@pytest.mark.unit
 class TestRouterIntegration:
     """Integration tests for router endpoints."""
 
@@ -550,7 +804,8 @@ class TestRouterIntegration:
         # Assert expected endpoints exist
         expected_paths = [
             "/auth/register",
-            "/auth/login", 
+            "/auth/login",
+            "/auth/logout",
             "/users/me",
             "/users",
             "/users/{user_id}"
@@ -637,6 +892,7 @@ class TestRouterIntegration:
         ("/users/me", "GET", True),
         ("/auth/register", "POST", False),
         ("/auth/login", "POST", False),
+        ("/auth/logout", "POST", True),
     ])
     def test_endpoint_authentication_requirements(
         self, endpoint, method, expected_auth, client

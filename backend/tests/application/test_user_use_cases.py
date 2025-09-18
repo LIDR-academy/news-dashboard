@@ -10,7 +10,8 @@ from src.application.use_cases.user_use_cases import (
     GetUserByIdUseCase,
     GetUserByEmailUseCase,
     CreateUserUseCase,
-    AuthenticateUserUseCase
+    AuthenticateUserUseCase,
+    LogoutUserUseCase
 )
 
 
@@ -509,3 +510,140 @@ class TestUserUseCasesIntegration:
         # Assert
         assert retrieved_user == created_user
         mock_user_repository.find_by_id.assert_called_once_with(created_user.id)
+
+
+@pytest.mark.service
+@pytest.mark.unit
+class TestLogoutUserUseCase:
+    """Test suite for LogoutUserUseCase."""
+
+    @pytest.mark.asyncio
+    async def test_execute_returns_true_when_user_exists(self, mock_user_repository, user_entity_with_id):
+        """Test that execute returns True when user exists."""
+        # Arrange
+        user_id = "507f1f77bcf86cd799439011"
+        mock_user_repository.find_by_id.return_value = user_entity_with_id
+        use_case = LogoutUserUseCase(mock_user_repository)
+
+        # Act
+        result = await use_case.execute(user_id)
+
+        # Assert
+        assert result is True
+        mock_user_repository.find_by_id.assert_called_once_with(user_id)
+
+    @pytest.mark.asyncio
+    async def test_execute_raises_user_not_found_error_when_user_does_not_exist(self, mock_user_repository):
+        """Test that execute raises UserNotFoundError when user does not exist."""
+        # Arrange
+        user_id = "nonexistent_id"
+        mock_user_repository.find_by_id.return_value = None
+        use_case = LogoutUserUseCase(mock_user_repository)
+
+        # Act & Assert
+        with pytest.raises(UserNotFoundError) as exc_info:
+            await use_case.execute(user_id)
+
+        assert exc_info.value.entity_id == user_id
+        mock_user_repository.find_by_id.assert_called_once_with(user_id)
+
+    @pytest.mark.asyncio
+    async def test_execute_propagates_repository_exceptions(self, mock_user_repository):
+        """Test that execute propagates repository exceptions."""
+        # Arrange
+        user_id = "test_id"
+        repository_error = Exception("Database connection failed")
+        mock_user_repository.find_by_id.side_effect = repository_error
+        use_case = LogoutUserUseCase(mock_user_repository)
+
+        # Act & Assert
+        with pytest.raises(Exception) as exc_info:
+            await use_case.execute(user_id)
+
+        assert str(exc_info.value) == "Database connection failed"
+        mock_user_repository.find_by_id.assert_called_once_with(user_id)
+
+    @pytest.mark.asyncio
+    async def test_execute_validates_user_exists_before_returning_success(self, mock_user_repository, user_entity_with_id):
+        """Test that execute validates user exists before returning success."""
+        # Arrange
+        user_id = user_entity_with_id.id
+        mock_user_repository.find_by_id.return_value = user_entity_with_id
+        use_case = LogoutUserUseCase(mock_user_repository)
+
+        # Act
+        result = await use_case.execute(user_id)
+
+        # Assert
+        assert result is True
+        # Verify that repository was called to validate user existence
+        mock_user_repository.find_by_id.assert_called_once_with(user_id)
+
+    @pytest.mark.parametrize("user_id", [
+        "507f1f77bcf86cd799439011",  # Valid ObjectId format
+        "123456789012345678901234",  # Another valid format
+        "simple_string_id",          # String ID
+    ])
+    @pytest.mark.asyncio
+    async def test_execute_works_with_various_user_id_formats(self, user_id, mock_user_repository, user_entity_with_id):
+        """Test that execute works with various user ID formats."""
+        # Arrange
+        user_entity_with_id.id = user_id  # Set the ID to match
+        mock_user_repository.find_by_id.return_value = user_entity_with_id
+        use_case = LogoutUserUseCase(mock_user_repository)
+
+        # Act
+        result = await use_case.execute(user_id)
+
+        # Assert
+        assert result is True
+        mock_user_repository.find_by_id.assert_called_once_with(user_id)
+
+    @pytest.mark.asyncio
+    async def test_execute_handles_inactive_user_successfully(self, mock_user_repository, user_entity_with_id):
+        """Test that execute handles inactive user successfully."""
+        # Arrange
+        user_id = user_entity_with_id.id
+        user_entity_with_id.is_active = False  # Inactive user
+        mock_user_repository.find_by_id.return_value = user_entity_with_id
+        use_case = LogoutUserUseCase(mock_user_repository)
+
+        # Act
+        result = await use_case.execute(user_id)
+
+        # Assert
+        assert result is True  # Should still allow logout even for inactive users
+        mock_user_repository.find_by_id.assert_called_once_with(user_id)
+
+    def test_constructor_injection_pattern(self, mock_user_repository):
+        """Test that LogoutUserUseCase follows constructor injection pattern."""
+        # Arrange & Act
+        use_case = LogoutUserUseCase(mock_user_repository)
+
+        # Assert
+        assert use_case.user_repository is mock_user_repository
+        assert hasattr(use_case, 'execute')
+        assert callable(use_case.execute)
+
+    def test_execute_is_async_method(self, mock_user_repository):
+        """Test that execute method is properly async."""
+        # Arrange
+        use_case = LogoutUserUseCase(mock_user_repository)
+
+        # Act & Assert
+        import inspect
+        assert inspect.iscoroutinefunction(use_case.execute)
+
+    def test_use_case_can_be_instantiated_with_different_repositories(self, mock_user_repository):
+        """Test that LogoutUserUseCase can be instantiated with different repository instances."""
+        # Arrange
+        another_mock_repository = AsyncMock()
+
+        # Act
+        use_case_1 = LogoutUserUseCase(mock_user_repository)
+        use_case_2 = LogoutUserUseCase(another_mock_repository)
+
+        # Assert
+        assert use_case_1.user_repository is mock_user_repository
+        assert use_case_2.user_repository is another_mock_repository
+        assert use_case_1.user_repository is not use_case_2.user_repository

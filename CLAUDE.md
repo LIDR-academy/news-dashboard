@@ -158,6 +158,28 @@ The frontend is organized by features with each feature containing:
 ## Environment Setup
 
 
+## API Endpoints
+
+### Authentication Endpoints
+- `POST /api/v1/auth/register` - User registration
+- `POST /api/v1/auth/login` - User authentication with JWT token
+- `POST /api/v1/auth/logout` - Secure logout with user validation (requires authentication)
+
+### User Endpoints
+- `GET /api/v1/users/me` - Get current authenticated user information (protected)
+
+## Key Components
+
+### Backend Components
+- **LogoutUserUseCase** (`src/application/use_cases/user_use_cases.py`): Validates user exists for logout
+- **LogoutResponse** (`src/infrastructure/web/dto/user_dto.py`): Structured logout response DTO
+- **Logout Endpoint** (`src/infrastructure/web/routers/users.py`): POST /auth/logout with authentication
+
+### Frontend Components
+- **DashboardHeader** (`src/components/DashboardHeader.tsx`): Reusable header with user email display and logout button
+- **useLogout Mutation** (`src/features/auth/hooks/mutations/useLogout.mutation.ts`): Calls backend logout service before clearing cache
+- **useAuthContext** (`src/features/auth/hooks/useAuthContext.tsx`): Auth state management with logout functionality
+
 ## Important Files
 - `backend/src/app.py`: FastAPI application factory
 - `backend/src/main.py`: Application entry point
