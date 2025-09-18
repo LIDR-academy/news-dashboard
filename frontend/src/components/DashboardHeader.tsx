@@ -1,6 +1,7 @@
 import { useAuthContext } from '@/features/auth/hooks/useAuthContext';
 import { Button } from '@/components/ui/button';
-import { LogOut, User } from 'lucide-react';
+import { LogOut, User, Settings } from 'lucide-react';
+import { Link } from 'react-router-dom';
 
 interface DashboardHeaderProps {
   title: string;
@@ -35,6 +36,19 @@ export const DashboardHeader = ({ title, subtitle }: DashboardHeaderProps) => {
             <span>{userEmail}</span>
           </div>
         )}
+
+        {/* Profile Button */}
+        <Button
+          variant="outline"
+          size="sm"
+          asChild
+          className="flex items-center gap-2"
+        >
+          <Link to="/profile">
+            <Settings className="h-4 w-4" />
+            Profile
+          </Link>
+        </Button>
 
         {/* Logout Button */}
         <Button
