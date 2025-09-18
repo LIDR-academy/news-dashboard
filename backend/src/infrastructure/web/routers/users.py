@@ -7,13 +7,14 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordRequestForm
 
 from src.domain.exceptions.user import UserNotFoundError, UserAlreadyExistsError
-from src.infrastructure.web.dto.user_dto import UserCreate, UserResponse, Token
+from src.infrastructure.web.dto.user_dto import UserCreate, UserResponse, Token, LogoutResponse
 from src.infrastructure.web.dependencies import (
     get_all_users_use_case,
     get_user_by_id_use_case,
     get_create_user_use_case,
     get_authenticate_user_use_case,
-    get_current_active_user
+    get_current_active_user,
+    get_logout_user_use_case
 )
 from src.infrastructure.web.mappers import UserMapper
 from src.infrastructure.web.security import (
@@ -26,7 +27,8 @@ from src.application.use_cases.user_use_cases import (
     GetAllUsersUseCase,
     GetUserByIdUseCase,
     CreateUserUseCase,
-    AuthenticateUserUseCase
+    AuthenticateUserUseCase,
+    LogoutUserUseCase
 )
 from src.domain.entities.user import User
 
@@ -95,6 +97,30 @@ async def login(
     )
     
     return Token(access_token=access_token)
+
+
+@router.post("/auth/logout", response_model=LogoutResponse)
+async def logout(
+    current_user: dict = Depends(get_current_active_user),
+    logout_use_case: LogoutUserUseCase = Depends(get_logout_user_use_case)
+):
+    """Logout user and invalidate session."""
+    try:
+        success = await logout_use_case.execute(current_user["id"])
+        return LogoutResponse(
+            message="Successfully logged out",
+            success=success
+        )
+    except UserNotFoundError:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="User not found"
+        )
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Logout failed: {str(e)}"
+        )
 
 
 @router.get("/users/me", response_model=UserResponse)

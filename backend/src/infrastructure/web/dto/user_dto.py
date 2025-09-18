@@ -50,3 +50,9 @@ class Token(BaseModel):
 class TokenData(BaseModel):
     """DTO for token data."""
     username: Optional[str] = None
+
+
+class LogoutResponse(BaseModel):
+    """DTO for logout response."""
+    message: str
+    success: bool

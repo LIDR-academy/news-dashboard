@@ -84,3 +84,31 @@ class AuthenticateUserUseCase:
         if not user:
             user = await self.user_repository.find_by_email(username)
         return user
+
+
+class LogoutUserUseCase:
+    """Use case for user logout."""
+
+    def __init__(self, user_repository: UserRepositoryPort):
+        self.user_repository = user_repository
+
+    async def execute(self, user_id: str) -> bool:
+        """Execute the logout use case.
+
+        Args:
+            user_id: ID of the user logging out
+
+        Returns:
+            bool: True if logout successful
+
+        Raises:
+            UserNotFoundError: If user doesn't exist
+        """
+        # Verify user exists (business rule validation)
+        user = await self.user_repository.find_by_id(user_id)
+        if user is None:
+            raise UserNotFoundError(user_id)
+
+        # In stateless JWT implementation, logout is just a success confirmation
+        # The actual token invalidation happens client-side
+        return True

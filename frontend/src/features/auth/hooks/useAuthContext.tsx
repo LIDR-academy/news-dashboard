@@ -26,7 +26,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const [auth, setAuth] = useState<AuthResponse | null>(null);
   const [userEmail, setUserEmail] = useState<string | null>(() => localStorage.getItem('user_email'));
   const { login: loginMutation, isLoading: isLoggingIn, error: loginError } = useLoginMutation();
-  const { logout: logoutMutation, isLoading: isLoggingOut } = useLogoutMutation();
+  const { action: logoutMutation, isLoading: isLoggingOut } = useLogoutMutation();
   const { registerMutation, isPending: isRegistering, error: registerError } = useRegisterMutation();
   
 

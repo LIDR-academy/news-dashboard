@@ -15,7 +15,8 @@ from src.application.use_cases.user_use_cases import (
     GetUserByIdUseCase,
     GetUserByEmailUseCase,
     CreateUserUseCase,
-    AuthenticateUserUseCase
+    AuthenticateUserUseCase,
+    LogoutUserUseCase
 )
 from src.infrastructure.database import get_database
 
@@ -53,6 +54,11 @@ def get_create_user_use_case() -> CreateUserUseCase:
 def get_authenticate_user_use_case() -> AuthenticateUserUseCase:
     """Get authenticate user use case."""
     return AuthenticateUserUseCase(get_user_repository())
+
+
+def get_logout_user_use_case() -> LogoutUserUseCase:
+    """Get logout user use case."""
+    return LogoutUserUseCase(get_user_repository())
 
 
 # Authentication dependencies
