@@ -7,6 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { NewsCard } from './NewsCard';
 import { NewsStatus, type NewsItem } from '../data/news.schema';
+import { AddNewsModal } from './AddNewsModal';
 import { cn } from '@/lib/utils';
 
 interface NewsColumnProps {
@@ -38,9 +39,18 @@ export const NewsColumn = ({ title, status, items, count }: NewsColumnProps) => 
       <div className={cn('p-4 border-b', statusColors[status])}>
         <div className="flex items-center justify-between">
           <h3 className="font-semibold text-lg">{title}</h3>
-          <Badge variant="secondary" className="ml-2">
-            {count}
-          </Badge>
+          <div className="flex items-center gap-2">
+            {status === NewsStatus.PENDING && (
+              <AddNewsModal
+                size="sm"
+                variant="ghost"
+                className="h-8"
+              />
+            )}
+            <Badge variant="secondary">
+              {count}
+            </Badge>
+          </div>
         </div>
       </div>
 

@@ -1,57 +1,78 @@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Button } from '@/components/ui/button';
+import { Plus } from 'lucide-react';
 import { useNewsContext } from '../hooks/useNewsContext';
 import { NewsCard } from './NewsCard';
+import { AddNewsModal } from './AddNewsModal';
 import { NewsStatus } from '../data/news.schema';
 
 export const NewsMobileView = () => {
   const { newsByStatus } = useNewsContext();
 
   return (
-    <Tabs defaultValue="pending" className="w-full">
-      <TabsList className="grid w-full grid-cols-3 bg-white/95 backdrop-blur-sm">
-        <TabsTrigger value="pending" className="relative">
-          To Read
-          <Badge
-            variant="secondary"
-            className="ml-2 bg-yellow-100 text-yellow-900"
-          >
-            {newsByStatus.pending.length}
-          </Badge>
-        </TabsTrigger>
-        <TabsTrigger value="reading" className="relative">
-          Reading
-          <Badge
-            variant="secondary"
-            className="ml-2 bg-blue-100 text-blue-900"
-          >
-            {newsByStatus.reading.length}
-          </Badge>
-        </TabsTrigger>
-        <TabsTrigger value="read" className="relative">
-          Completed
-          <Badge
-            variant="secondary"
-            className="ml-2 bg-green-100 text-green-900"
-          >
-            {newsByStatus.read.length}
-          </Badge>
-        </TabsTrigger>
-      </TabsList>
+    <div className="relative">
+      <Tabs defaultValue="pending" className="w-full">
+        <TabsList className="grid w-full grid-cols-3 bg-white/95 backdrop-blur-sm">
+          <TabsTrigger value="pending" className="relative">
+            To Read
+            <Badge
+              variant="secondary"
+              className="ml-2 bg-yellow-100 text-yellow-900"
+            >
+              {newsByStatus.pending.length}
+            </Badge>
+          </TabsTrigger>
+          <TabsTrigger value="reading" className="relative">
+            Reading
+            <Badge
+              variant="secondary"
+              className="ml-2 bg-blue-100 text-blue-900"
+            >
+              {newsByStatus.reading.length}
+            </Badge>
+          </TabsTrigger>
+          <TabsTrigger value="read" className="relative">
+            Completed
+            <Badge
+              variant="secondary"
+              className="ml-2 bg-green-100 text-green-900"
+            >
+              {newsByStatus.read.length}
+            </Badge>
+          </TabsTrigger>
+        </TabsList>
 
-      <TabsContent value="pending" className="mt-4">
-        <MobileNewsColumn items={newsByStatus.pending} status={NewsStatus.PENDING} />
-      </TabsContent>
+        <TabsContent value="pending" className="mt-4">
+          <MobileNewsColumn items={newsByStatus.pending} status={NewsStatus.PENDING} />
+        </TabsContent>
 
-      <TabsContent value="reading" className="mt-4">
-        <MobileNewsColumn items={newsByStatus.reading} status={NewsStatus.READING} />
-      </TabsContent>
+        <TabsContent value="reading" className="mt-4">
+          <MobileNewsColumn items={newsByStatus.reading} status={NewsStatus.READING} />
+        </TabsContent>
 
-      <TabsContent value="read" className="mt-4">
-        <MobileNewsColumn items={newsByStatus.read} status={NewsStatus.READ} />
-      </TabsContent>
-    </Tabs>
+        <TabsContent value="read" className="mt-4">
+          <MobileNewsColumn items={newsByStatus.read} status={NewsStatus.READ} />
+        </TabsContent>
+      </Tabs>
+
+      {/* Floating Action Button */}
+      <div className="fixed bottom-6 right-6 z-40">
+        <AddNewsModal
+          size="lg"
+          className="rounded-full h-14 w-14 shadow-lg"
+        >
+          <Button
+            size="lg"
+            className="rounded-full h-14 w-14 shadow-lg"
+            aria-label="Add new news item"
+          >
+            <Plus className="h-6 w-6" />
+          </Button>
+        </AddNewsModal>
+      </div>
+    </div>
   );
 };
 
