@@ -14,7 +14,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "say -v Kate \"Se ha terminado el trabajo\"", 
+            "command": "say -v Kate \"Done\"", 
             "timeout": 120
           }
         ]
