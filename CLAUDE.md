@@ -82,6 +82,25 @@ npm run preview
 docker compose up -d
 ```
 
+### E2E Testing with Claude Code
+```bash
+# Run E2E tests with Playwright (interactive mode)
+/e2e
+
+# Run full E2E test suite
+/e2e full
+
+# Test specific functionality
+/e2e logout            # Test logout functionality
+/e2e login             # Test login functionality
+/e2e profile           # Test profile management
+/e2e auth              # Test authentication flows
+/e2e dashboard         # Test dashboard functionality
+
+# Test custom feature
+/e2e "feature name"    # Test specific feature by name
+```
+
 ## Architecture
 
 ### Backend - Hexagonal Architecture
@@ -218,3 +237,5 @@ Subagents will do research about the implementation and report feedback, but you
 When passing task to sub agent, make sure you pass the context file, e.g. `.claude/sessions/context_session_{feature_name}.md`.
 
 After each sub agent finish the work, make sure you read the related documentation they created to get full context of the plan before you start executing
+
+

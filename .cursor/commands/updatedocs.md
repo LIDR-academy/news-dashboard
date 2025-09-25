@@ -1,0 +1,3 @@
+## Documentacion
+Cuando documentes tecnicamente, por ejemplo el modelo de datos, readme, api-spec, etc. hazlo SIEMPRE EN INGLES, incluidos los comentarios. Esto aplica tanto para creación como para actualización, y también aplica a la documentacion en el codigo (comentarios, explicacion de funciones o campos, etc)
+Siempre que vayas a hacer un commit o un git push o te pidan documentar un commit, antes SIEMPRE revisarás que documentacion tecnica debería ser actualizada. 
