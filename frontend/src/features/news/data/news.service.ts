@@ -23,6 +23,7 @@ export const newsService = {
     if (filters?.limit) params.append('limit', String(filters.limit));
     if (filters?.offset) params.append('offset', String(filters.offset));
 
+
     const response = await apiClient.get<NewsListResponse>(`/api/news/user?${params}`);
     return response;
   },

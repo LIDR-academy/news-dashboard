@@ -56,7 +56,13 @@ class GetUserNewsUseCase:
             offset=offset
         )
 
-        # Also get public news if needed
+        # Only include public news if NOT filtering by favorites
+        # When filtering by favorites, only user's own favorited items should be shown
+        if is_favorite is not None:
+            # Return only user's favorited news, no public news
+            return user_news
+        
+        # Also get public news if not filtering by favorites
         public_news = await self.news_repository.get_public_news(
             category=category,
             date_from=date_from,

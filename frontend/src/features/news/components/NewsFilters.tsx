@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -17,7 +16,6 @@ import { NewsCategory } from '../data/news.schema';
 
 export const NewsFilters = () => {
   const { filters, setFilters } = useNewsContext();
-  const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
 
   const handleCategoryFilter = (category: NewsCategory | null) => {
     setFilters({
@@ -27,16 +25,14 @@ export const NewsFilters = () => {
   };
 
   const handleFavoriteToggle = (checked: boolean) => {
-    setShowFavoritesOnly(checked);
     setFilters({
       ...filters,
-      is_favorite: checked || undefined,
+      is_favorite: checked ? true : undefined,
     });
   };
 
   const clearFilters = () => {
     setFilters({});
-    setShowFavoritesOnly(false);
   };
 
   const hasActiveFilters = filters.category || filters.is_favorite;
@@ -80,7 +76,7 @@ export const NewsFilters = () => {
       <div className="flex items-center space-x-2">
         <Switch
           id="favorites"
-          checked={showFavoritesOnly}
+          checked={!!filters.is_favorite}
           onCheckedChange={handleFavoriteToggle}
         />
         <Label htmlFor="favorites" className="cursor-pointer">
