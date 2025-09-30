@@ -38,7 +38,7 @@ def create_app() -> FastAPI:
     
     @app.get("/")
     async def root():
-        return {"message": "E-commerce API with Hexagonal Architecture"}
+        return {"message": "News Dashboard with Hexagonal Architecture"}
     
     @app.get("/api/v1/health")
     async def health_check():
