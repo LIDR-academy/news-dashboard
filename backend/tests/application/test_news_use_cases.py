@@ -307,12 +307,12 @@ class TestGetUserNewsUseCase:
         date_from = datetime(2024, 1, 1)
         date_to = datetime(2024, 12, 31)
         
-        # Act
+        # Act - Note: NOT filtering by is_favorite so public news will be fetched
         result = await use_case.execute(
             user_id="user123",
             status=NewsStatus.PENDING,
             category=NewsCategory.RESEARCH,
-            is_favorite=True,
+            is_favorite=None,  # Don't filter by favorites to allow public news
             date_from=date_from,
             date_to=date_to,
             limit=50,
@@ -324,7 +324,7 @@ class TestGetUserNewsUseCase:
             user_id="user123",
             status=NewsStatus.PENDING,
             category=NewsCategory.RESEARCH,
-            is_favorite=True,
+            is_favorite=None,  # Changed from True
             date_from=date_from,
             date_to=date_to,
             limit=50,

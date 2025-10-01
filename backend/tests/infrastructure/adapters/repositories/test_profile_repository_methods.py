@@ -9,15 +9,18 @@ from src.domain.entities.user import User
 
 
 @pytest.fixture
-def mock_database():
-    """Mock database."""
-    return Mock()
-
-
-@pytest.fixture
 def mock_collection():
     """Mock collection."""
     return AsyncMock()
+
+
+@pytest.fixture
+def mock_database(mock_collection):
+    """Mock database."""
+    mock_db = Mock()
+    # Make the database subscriptable to return the mock collection
+    mock_db.__getitem__ = Mock(return_value=mock_collection)
+    return mock_db
 
 
 @pytest.fixture
@@ -25,7 +28,7 @@ def user_repository(mock_database, mock_collection):
     """User repository with mocked dependencies."""
     with patch('src.infrastructure.adapters.repositories.mongodb_user_repository.get_database', return_value=mock_database):
         repository = MongoDBUserRepository()
-        repository.collection = mock_collection
+        # Collection is already set via mock_database["users"]
         return repository
 
 

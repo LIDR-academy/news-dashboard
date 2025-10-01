@@ -327,10 +327,10 @@ class TestCurrentUserEndpoint:
     ):
         """Test getting current user returns UserResponse."""
         # Arrange - Mock dependencies using FastAPI's dependency override
-        from src.infrastructure.web.dependencies import get_current_active_user
+        from src.infrastructure.web.dependencies import get_current_user
         
         # Override dependencies
-        test_app.dependency_overrides[get_current_active_user] = lambda: user_entity_with_id
+        test_app.dependency_overrides[get_current_user] = lambda: user_entity_with_id
         
         client = TestClient(test_app)
         
@@ -349,7 +349,7 @@ class TestCurrentUserEndpoint:
     ):
         """Test getting current user without authentication returns 401."""
         # Arrange - Mock dependencies using FastAPI's dependency override
-        from src.infrastructure.web.dependencies import get_current_active_user
+        from src.infrastructure.web.dependencies import get_current_user
         from fastapi import HTTPException, status as http_status
         
         def mock_auth_failure():
@@ -359,7 +359,7 @@ class TestCurrentUserEndpoint:
             )
         
         # Override dependencies
-        test_app.dependency_overrides[get_current_active_user] = mock_auth_failure
+        test_app.dependency_overrides[get_current_user] = mock_auth_failure
         
         client = TestClient(test_app)
         

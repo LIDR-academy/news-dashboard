@@ -65,6 +65,8 @@ async def register(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=str(e)
         )
+    except HTTPException:
+        raise  # Re-raise HTTPException without wrapping
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -119,6 +121,8 @@ async def logout(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="User not found"
         )
+    except HTTPException:
+        raise  # Re-raise HTTPException without wrapping
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -191,6 +195,8 @@ async def update_user_profile(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=str(e)
         )
+    except HTTPException:
+        raise  # Re-raise HTTPException without wrapping
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -230,6 +236,8 @@ async def change_password(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=str(e)
         )
+    except HTTPException:
+        raise  # Re-raise HTTPException without wrapping
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
