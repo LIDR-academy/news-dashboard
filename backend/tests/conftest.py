@@ -7,7 +7,9 @@ from unittest.mock import AsyncMock, Mock
 from bson import ObjectId
 
 from src.domain.entities.user import User
+from src.domain.entities.news_item import NewsItem, NewsStatus, NewsCategory
 from src.application.ports.repositories import UserRepositoryPort
+from src.application.ports.news_repository import NewsRepository
 
 
 # Domain Entity Fixtures
@@ -276,3 +278,93 @@ def pytest_configure(config):
     config.addinivalue_line(
         "markers", "service: mark test as service/use case test"
     )
+
+
+# News Entity Fixtures
+@pytest.fixture
+def valid_news_data():
+    """Valid news data for creating NewsItem entities."""
+    return {
+        "source": "TechCrunch",
+        "title": "New AI Breakthrough Announced",
+        "summary": "Researchers have made a significant breakthrough in AI technology...",
+        "link": "https://example.com/article",
+        "image_url": "https://example.com/image.jpg",
+        "category": NewsCategory.RESEARCH,
+        "user_id": "507f1f77bcf86cd799439012",
+        "is_public": False
+    }
+
+
+@pytest.fixture
+def news_entity(valid_news_data):
+    """Create a valid NewsItem entity."""
+    return NewsItem(**valid_news_data)
+
+
+@pytest.fixture
+def news_entity_with_id(valid_news_data):
+    """Create a NewsItem entity with ID set."""
+    data = valid_news_data.copy()
+    data.update({
+        "id": "507f1f77bcf86cd799439011",
+        "status": NewsStatus.PENDING,
+        "is_favorite": False,
+        "created_at": datetime.utcnow(),
+        "updated_at": datetime.utcnow()
+    })
+    return NewsItem(**data)
+
+
+@pytest.fixture
+def news_create_data():
+    """Valid data for news creation API."""
+    return {
+        "source": "TechCrunch",
+        "title": "New AI Breakthrough Announced",
+        "summary": "Researchers have made a significant breakthrough in AI technology...",
+        "link": "https://example.com/article",
+        "image_url": "https://example.com/image.jpg",
+        "category": "research",
+        "is_public": False
+    }
+
+
+@pytest.fixture
+def test_news_list(valid_news_data):
+    """List of test NewsItem entities."""
+    news_items = []
+    categories = [NewsCategory.GENERAL, NewsCategory.RESEARCH, NewsCategory.PRODUCT]
+    statuses = [NewsStatus.PENDING, NewsStatus.READING, NewsStatus.READ]
+    
+    for i in range(3):
+        data = valid_news_data.copy()
+        data.update({
+            "id": f"507f1f77bcf86cd79943901{i}",
+            "title": f"News Article {i}",
+            "category": categories[i],
+            "status": statuses[i],
+            "is_favorite": i == 0,  # First one is favorite
+            "created_at": datetime.utcnow(),
+            "updated_at": datetime.utcnow()
+        })
+        news_items.append(NewsItem(**data))
+    return news_items
+
+
+@pytest.fixture
+def mock_news_repository():
+    """Mock NewsRepository for testing use cases."""
+    mock = AsyncMock(spec=NewsRepository)
+    
+    # Configure default return values
+    mock.get_by_id.return_value = None
+    mock.get_by_user_id.return_value = []
+    mock.get_public_news.return_value = []
+    mock.create.return_value = None
+    mock.update.return_value = None
+    mock.delete.return_value = False
+    mock.exists_by_link_and_user.return_value = False
+    mock.count_by_user_and_status.return_value = 0
+    
+    return mock
