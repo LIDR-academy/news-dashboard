@@ -8,8 +8,6 @@ from .base_user_use_cases import (
     AuthenticateUserUseCase,
     LogoutUserUseCase
 )
-from .update_user_use_case import UpdateUserUseCase
-from .change_password_use_case import ChangePasswordUseCase
 
 __all__ = [
     "GetAllUsersUseCase",
@@ -17,7 +15,5 @@ __all__ = [
     "GetUserByEmailUseCase",
     "CreateUserUseCase",
     "AuthenticateUserUseCase",
-    "LogoutUserUseCase",
-    "UpdateUserUseCase",
-    "ChangePasswordUseCase"
+    "LogoutUserUseCase"
 ]
