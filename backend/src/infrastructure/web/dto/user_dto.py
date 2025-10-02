@@ -49,3 +49,45 @@ class LogoutResponse(BaseModel):
     """DTO for logout response."""
     message: str
     success: bool
+
+
+class UserProfileUpdateRequest(BaseModel):
+    """DTO for updating user profile."""
+    email: Optional[EmailStr] = None
+    username: Optional[str] = Field(None, min_length=3, max_length=50)
+    
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "email": "newemail@example.com",
+                "username": "newusername"
+            }
+        }
+
+
+class ChangePasswordRequest(BaseModel):
+    """DTO for changing password."""
+    current_password: str = Field(..., min_length=1, description="Current password")
+    new_password: str = Field(..., min_length=6, description="New password (minimum 6 characters)")
+    
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "current_password": "oldpassword123",
+                "new_password": "newpassword123"
+            }
+        }
+
+
+class PasswordChangeResponse(BaseModel):
+    """DTO for password change response."""
+    message: str
+    success: bool
+    
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "message": "Password changed successfully",
+                "success": True
+            }
+        }

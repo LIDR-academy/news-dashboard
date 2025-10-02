@@ -28,3 +28,23 @@ class InactiveUserError(BusinessRuleViolationError):
 class InvalidCredentialsError(BusinessRuleViolationError):
     """Raised when user credentials are invalid."""
     pass
+
+
+class ProfileUpdateError(BusinessRuleViolationError):
+    """Raised when profile update fails."""
+    pass
+
+
+class PasswordChangeError(BusinessRuleViolationError):
+    """Raised when password change fails."""
+    pass
+
+
+class InvalidProfileDataError(ValidationError):
+    """Raised when profile data is invalid."""
+    pass
+
+
+class CurrentPasswordMismatchError(BusinessRuleViolationError):
+    """Raised when current password doesn't match during password change."""
+    pass

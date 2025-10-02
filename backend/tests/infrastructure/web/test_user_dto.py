@@ -7,12 +7,14 @@ from pydantic import ValidationError
 from src.infrastructure.web.dto.user_dto import (
     UserBase,
     UserCreate,
-    UserUpdate,
     UserResponse,
     UserLogin,
     Token,
     TokenData,
-    LogoutResponse
+    LogoutResponse,
+    UserProfileUpdateRequest,
+    ChangePasswordRequest,
+    PasswordChangeResponse
 )
 
 
@@ -217,68 +219,57 @@ class TestUserCreate:
 
 @pytest.mark.api
 @pytest.mark.unit
-class TestUserUpdate:
-    """Test suite for UserUpdate DTO."""
+class TestUserProfileUpdateRequest:
+    """Test suite for UserProfileUpdateRequest DTO."""
 
     def test_user_update_with_all_optional_fields_succeeds(self):
-        """Test that UserUpdate can be created with all optional fields."""
+        """Test that UserProfileUpdateRequest can be created with all optional fields."""
         # Arrange
         data = {
             "email": "updated@example.com",
-            "username": "updated_user",
-            "is_active": False
+            "username": "updated_user"
         }
         
         # Act
-        user_update = UserUpdate(**data)
+        user_update = UserProfileUpdateRequest(**data)
         
         # Assert
         assert user_update.email == data["email"]
         assert user_update.username == data["username"]
-        assert user_update.is_active == data["is_active"]
 
     def test_user_update_with_partial_fields_succeeds(self):
-        """Test that UserUpdate can be created with partial fields."""
+        """Test that UserProfileUpdateRequest can be created with partial fields."""
         # Test with only email
-        update1 = UserUpdate(email="new@example.com")
+        update1 = UserProfileUpdateRequest(email="new@example.com")
         assert update1.email == "new@example.com"
         assert update1.username is None
-        assert update1.is_active is None
         
         # Test with only username
-        update2 = UserUpdate(username="newuser")
+        update2 = UserProfileUpdateRequest(username="newuser")
         assert update2.email is None
         assert update2.username == "newuser"
-        assert update2.is_active is None
-        
-        # Test with only is_active
-        update3 = UserUpdate(is_active=False)
-        assert update3.email is None
-        assert update3.username is None
-        assert update3.is_active is False
 
     def test_user_update_with_no_fields_succeeds(self):
-        """Test that UserUpdate can be created with no fields (all None)."""
+        """Test that UserProfileUpdateRequest can be created with no fields (all None)."""
         # Act
-        user_update = UserUpdate()
+        user_update = UserProfileUpdateRequest()
         
         # Assert
         assert user_update.email is None
         assert user_update.username is None
-        assert user_update.is_active is None
 
     def test_user_update_with_invalid_email_raises_validation_error(self):
-        """Test that UserUpdate raises ValidationError for invalid email."""
+        """Test that UserProfileUpdateRequest raises ValidationError for invalid email."""
         # Act & Assert
         with pytest.raises(ValidationError) as exc_info:
-            UserUpdate(email="invalid.email")
+            UserProfileUpdateRequest(email="invalid.email")
         
         assert "email" in str(exc_info.value).lower()
 
     def test_user_update_serialization_excludes_none_values(self):
-        """Test that UserUpdate serialization can exclude None values."""
+        """Test that UserProfileUpdateRequest serialization can exclude None values."""
         # Arrange
-        user_update = UserUpdate(email="test@example.com")
+        user_update = UserProfileUpdateRequest(email="test@example.com")
         
         # Act
         serialized = user_update.model_dump(exclude_none=True)
@@ -768,7 +759,7 @@ class TestUserDTOsIntegration:
         dtos = [
             UserBase(email="test@example.com", username="testuser"),
             UserCreate(email="test@example.com", username="testuser", password="password123"),
-            UserUpdate(email="updated@example.com"),
+            UserProfileUpdateRequest(email="updated@example.com"),
             UserResponse(
                 id="123", 
                 email="test@example.com", 

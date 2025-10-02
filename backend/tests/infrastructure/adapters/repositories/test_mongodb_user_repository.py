@@ -455,6 +455,104 @@ class TestMongoDBUserRepository:
         # Should not call count_documents if ObjectId creation fails
         mock_mongo_collection.count_documents.assert_not_called()
 
+    async def test_update_password_updates_password_and_returns_updated_user(
+        self, repository, mock_mongo_collection, user_document
+    ):
+        """Test that update_password updates only password field and returns updated User."""
+        # Arrange
+        user_id = str(user_document["_id"])
+        new_hashed_password = "new_hashed_password_123"
+        updated_doc = user_document.copy()
+        updated_doc["hashed_password"] = new_hashed_password
+        
+        mock_update_result = Mock()
+        mock_update_result.matched_count = 1
+        mock_mongo_collection.update_one.return_value = mock_update_result
+        mock_mongo_collection.find_one.return_value = updated_doc
+        
+        # Act
+        result = await repository.update_password(user_id, new_hashed_password)
+        
+        # Assert
+        assert isinstance(result, User)
+        assert result.hashed_password == new_hashed_password
+        
+        # Verify update_one was called with correct filter and update
+        update_call = mock_mongo_collection.update_one.call_args
+        filter_dict = update_call[0][0]
+        update_dict = update_call[0][1]
+        
+        assert filter_dict == {"_id": ObjectId(user_id)}
+        assert "$set" in update_dict
+        assert update_dict["$set"]["hashed_password"] == new_hashed_password
+        assert "updated_at" in update_dict["$set"]
+        
+        # Verify find_one was called to get the updated document
+        mock_mongo_collection.find_one.assert_called_once_with({"_id": ObjectId(user_id)})
+
+    async def test_update_password_raises_value_error_when_user_id_is_empty(self, repository):
+        """Test that update_password raises ValueError when user_id is empty."""
+        # Act & Assert
+        with pytest.raises(ValueError) as exc_info:
+            await repository.update_password("", "new_password")
+        
+        assert "User ID is required for password update" in str(exc_info.value)
+
+    async def test_update_password_raises_value_error_when_user_id_is_none(self, repository):
+        """Test that update_password raises ValueError when user_id is None."""
+        # Act & Assert
+        with pytest.raises(ValueError) as exc_info:
+            await repository.update_password(None, "new_password")
+        
+        assert "User ID is required for password update" in str(exc_info.value)
+
+    async def test_update_password_raises_value_error_when_hashed_password_is_empty(self, repository):
+        """Test that update_password raises ValueError when hashed_password is empty."""
+        # Act & Assert
+        with pytest.raises(ValueError) as exc_info:
+            await repository.update_password("507f1f77bcf86cd799439011", "")
+        
+        assert "Hashed password cannot be empty" in str(exc_info.value)
+
+    async def test_update_password_raises_value_error_when_hashed_password_is_whitespace(self, repository):
+        """Test that update_password raises ValueError when hashed_password is only whitespace."""
+        # Act & Assert
+        with pytest.raises(ValueError) as exc_info:
+            await repository.update_password("507f1f77bcf86cd799439011", "   ")
+        
+        assert "Hashed password cannot be empty" in str(exc_info.value)
+
+    async def test_update_password_raises_value_error_when_user_not_found(self, repository, mock_mongo_collection):
+        """Test that update_password raises ValueError when user is not found."""
+        # Arrange
+        user_id = "507f1f77bcf86cd799439011"
+        new_hashed_password = "new_hashed_password_123"
+        
+        mock_update_result = Mock()
+        mock_update_result.matched_count = 0  # No user found
+        mock_mongo_collection.update_one.return_value = mock_update_result
+        
+        # Act & Assert
+        with pytest.raises(ValueError) as exc_info:
+            await repository.update_password(user_id, new_hashed_password)
+        
+        assert f"User with id {user_id} not found" in str(exc_info.value)
+
+    async def test_update_password_handles_database_exception(self, repository, mock_mongo_collection):
+        """Test that update_password handles database exceptions gracefully."""
+        # Arrange
+        user_id = "507f1f77bcf86cd799439011"
+        new_hashed_password = "new_hashed_password_123"
+        database_error = Exception("Database connection failed")
+        mock_mongo_collection.update_one.side_effect = database_error
+        
+        # Act & Assert
+        with pytest.raises(ValueError) as exc_info:
+            await repository.update_password(user_id, new_hashed_password)
+        
+        assert f"Failed to update password for user {user_id}" in str(exc_info.value)
+        assert "Database connection failed" in str(exc_info.value)
+
     async def test_repository_handles_database_exceptions_gracefully(self, repository, mock_mongo_collection):
         """Test that repository handles database exceptions gracefully."""
         # Arrange

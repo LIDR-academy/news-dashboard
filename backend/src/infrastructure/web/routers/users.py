@@ -6,8 +6,22 @@ from typing import List
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordRequestForm
 
-from src.domain.exceptions.user import UserNotFoundError, UserAlreadyExistsError
-from src.infrastructure.web.dto.user_dto import UserCreate, UserResponse, Token, LogoutResponse
+from src.domain.exceptions.user import (
+    UserNotFoundError, 
+    UserAlreadyExistsError,
+    InvalidProfileDataError,
+    PasswordChangeError,
+    CurrentPasswordMismatchError
+)
+from src.infrastructure.web.dto.user_dto import (
+    UserCreate, 
+    UserResponse, 
+    Token, 
+    LogoutResponse,
+    UserProfileUpdateRequest,
+    ChangePasswordRequest,
+    PasswordChangeResponse
+)
 from src.infrastructure.web.dependencies import (
     get_all_users_use_case,
     get_user_by_id_use_case,
@@ -15,7 +29,9 @@ from src.infrastructure.web.dependencies import (
     get_authenticate_user_use_case,
     get_current_user,
     get_current_active_user,
-    get_logout_user_use_case
+    get_logout_user_use_case,
+    get_update_profile_use_case,
+    get_change_password_use_case
 )
 from src.infrastructure.web.mappers import UserMapper
 from src.infrastructure.web.security import (
@@ -138,7 +154,7 @@ async def read_users_me(current_user: User = Depends(get_current_user)):
 async def get_users(
     limit: int = 100,
     get_all_users_use_case: GetAllUsersUseCase = Depends(get_all_users_use_case),
-    current_user: User = Depends(get_current_active_user)
+    current_user: dict = Depends(get_current_active_user)
 ):
     """Get all users (requires authentication)."""
     users = await get_all_users_use_case.execute(limit)
@@ -149,7 +165,7 @@ async def get_users(
 async def get_user(
     user_id: str,
     get_user_by_id_use_case: GetUserByIdUseCase = Depends(get_user_by_id_use_case),
-    current_user: User = Depends(get_current_active_user)
+    current_user: dict = Depends(get_current_active_user)
 ):
     """Get user by ID (requires authentication)."""
     try:
@@ -159,4 +175,103 @@ async def get_user(
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"User with id {user_id} not found"
+        )
+
+
+@router.put("/users/me", response_model=UserResponse)
+async def update_user_profile(
+    profile_data: UserProfileUpdateRequest,
+    current_user: dict = Depends(get_current_active_user),
+    update_profile_use_case = Depends(get_update_profile_use_case)
+):
+    """Update current user's profile."""
+    try:
+        # Extract update data from request
+        update_data = UserMapper.extract_profile_update_data(profile_data)
+        
+        # Check if there's anything to update
+        if not update_data:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="No profile data provided for update"
+            )
+        
+        # Update user profile
+        updated_user = await update_profile_use_case.execute(
+            user_id=current_user["id"],
+            **update_data
+        )
+        
+        return UserMapper.to_response(updated_user)
+        
+    except UserNotFoundError:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="User not found"
+        )
+    except UserAlreadyExistsError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e)
+        )
+    except InvalidProfileDataError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e)
+        )
+    except HTTPException:
+        raise  # Re-raise HTTPException without wrapping
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to update profile: {str(e)}"
+        )
+
+
+@router.put("/users/me/password", response_model=PasswordChangeResponse)
+async def change_password(
+    password_data: ChangePasswordRequest,
+    current_user: dict = Depends(get_current_active_user),
+    change_password_use_case = Depends(get_change_password_use_case)
+):
+    """Change current user's password."""
+    try:
+        success = await change_password_use_case.execute(
+            user_id=current_user["id"],
+            current_password=password_data.current_password,
+            new_password=password_data.new_password
+        )
+        
+        if success:
+            return PasswordChangeResponse(
+                message="Password changed successfully",
+                success=True
+            )
+        else:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Failed to change password"
+            )
+            
+    except UserNotFoundError:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="User not found"
+        )
+    except CurrentPasswordMismatchError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e)
+        )
+    except PasswordChangeError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e)
+        )
+    except HTTPException:
+        raise  # Re-raise HTTPException without wrapping
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to change password: {str(e)}"
         )

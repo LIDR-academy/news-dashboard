@@ -131,3 +131,44 @@ class MongoDBUserRepository(UserRepositoryPort):
     async def get_by_username(self, username: str) -> Optional[User]:
         """Get user by username (alias for find_by_username)."""
         return await self.find_by_username(username)
+
+    async def update_password(self, user_id: str, hashed_password: str) -> User:
+        """Update user password specifically.
+        
+        Args:
+            user_id: ID of the user to update
+            hashed_password: New hashed password
+            
+        Returns:
+            User: Updated user entity
+            
+        Raises:
+            ValueError: If user_id is invalid or user not found
+        """
+        if not user_id:
+            raise ValueError("User ID is required for password update")
+            
+        if not hashed_password or not hashed_password.strip():
+            raise ValueError("Hashed password cannot be empty")
+            
+        try:
+            # Update only the password field and timestamp
+            result = await self.collection.update_one(
+                {"_id": ObjectId(user_id)}, 
+                {"$set": {
+                    "hashed_password": hashed_password,
+                    "updated_at": datetime.utcnow()
+                }}
+            )
+            
+            if result.matched_count == 0:
+                raise ValueError(f"User with id {user_id} not found")
+                
+            # Return updated user
+            updated_doc = await self.collection.find_one({"_id": ObjectId(user_id)})
+            return self._to_domain(updated_doc)
+            
+        except Exception as e:
+            if isinstance(e, ValueError):
+                raise
+            raise ValueError(f"Failed to update password for user {user_id}: {str(e)}")

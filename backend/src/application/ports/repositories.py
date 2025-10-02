@@ -62,3 +62,8 @@ class UserRepositoryPort(ABC):
     async def get_by_username(self, username: str) -> Optional[User]:
         """Get user by username (alias for find_by_username)."""
         pass
+
+    @abstractmethod
+    async def update_password(self, user_id: str, hashed_password: str) -> User:
+        """Update user password specifically."""
+        pass

@@ -18,6 +18,10 @@ from src.application.use_cases.user_use_cases import (
     AuthenticateUserUseCase,
     LogoutUserUseCase
 )
+from src.application.use_cases.user_use_cases.update_user_use_case import (
+    UpdateUserProfileUseCase,
+    ChangePasswordUseCase
+)
 from src.infrastructure.database import get_database
 
 @lru_cache()
@@ -59,6 +63,16 @@ def get_authenticate_user_use_case() -> AuthenticateUserUseCase:
 def get_logout_user_use_case() -> LogoutUserUseCase:
     """Get logout user use case."""
     return LogoutUserUseCase(get_user_repository())
+
+
+def get_update_profile_use_case() -> UpdateUserProfileUseCase:
+    """Get update profile use case instance."""
+    return UpdateUserProfileUseCase(get_user_repository())
+
+
+def get_change_password_use_case() -> ChangePasswordUseCase:
+    """Get change password use case instance."""
+    return ChangePasswordUseCase(get_user_repository())
 
 
 # Authentication dependencies

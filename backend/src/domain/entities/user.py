@@ -36,3 +36,23 @@ class User:
         if not hashed_password or not hashed_password.strip():
             raise ValueError("Password cannot be empty")
         self.hashed_password = hashed_password
+
+    def update_profile(self, email: str = None, username: str = None) -> None:
+        """Update user profile information."""
+        if email is not None:
+            if not email or not email.strip():
+                raise ValueError("User email cannot be empty")
+            if "@" not in email:
+                raise ValueError("Invalid email format")
+            self.email = email
+            
+        if username is not None:
+            if not username or not username.strip():
+                raise ValueError("User username cannot be empty")
+            self.username = username
+
+    def change_password(self, new_hashed_password: str) -> None:
+        """Change user password."""
+        if not new_hashed_password or not new_hashed_password.strip():
+            raise ValueError("New password cannot be empty")
+        self.hashed_password = new_hashed_password
