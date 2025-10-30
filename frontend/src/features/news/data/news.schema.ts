@@ -27,6 +27,8 @@ export interface NewsItem {
   is_public: boolean;
   created_at: string;
   updated_at?: string;
+  personal_note?: string;
+  note_updated_at?: string;
 }
 
 export interface CreateNewsRequest {
@@ -41,6 +43,10 @@ export interface CreateNewsRequest {
 
 export interface UpdateNewsStatusRequest {
   status: NewsStatus;
+}
+
+export interface UpdatePersonalNoteRequest {
+  note: string; // max 500 chars enforced by backend
 }
 
 export interface NewsFilters {

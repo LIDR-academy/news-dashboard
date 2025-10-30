@@ -480,3 +480,25 @@ class TestNewsItemEntity:
                     category=category,
                     user_id=user_id
                 )
+
+    def test_update_personal_note_success(self, sample_news_item):
+        """Personal note updates with valid input."""
+        note = "This is my note"
+        sample_news_item.update_personal_note(note)
+        assert sample_news_item.personal_note == note
+        assert sample_news_item.note_updated_at is not None
+
+    def test_update_personal_note_rejects_empty_or_long(self, sample_news_item):
+        """Validation for personal note content."""
+        with pytest.raises(ValueError):
+            sample_news_item.update_personal_note("")
+
+        long_note = "a" * 501
+        with pytest.raises(ValueError):
+            sample_news_item.update_personal_note(long_note)
+
+    def test_clear_personal_note(self, sample_news_item):
+        """Clearing the personal note sets it to None and updates timestamps."""
+        sample_news_item.update_personal_note("temp")
+        sample_news_item.clear_personal_note()
+        assert sample_news_item.personal_note is None

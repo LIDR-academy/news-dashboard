@@ -2,6 +2,7 @@ import { createContext, useContext, useState, useCallback, useMemo, type ReactNo
 import { useUserNewsQuery } from './queries/useUserNews.query';
 import { useNewsStatsQuery } from './queries/useNewsStats.query';
 import { useUpdateStatusMutation } from './mutations/useUpdateStatus.mutation';
+import { useUpdateNoteMutation } from './mutations/useUpdateNote.mutation';
 import { useToggleFavoriteMutation } from './mutations/useToggleFavorite.mutation';
 import type { NewsCategory, NewsFilters, NewsItem, NewsStatus } from '../data/news.schema';
 
@@ -49,6 +50,7 @@ export const NewsProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   // Mutations
   const { updateStatus } = useUpdateStatusMutation();
   const { toggleFavorite } = useToggleFavoriteMutation();
+  const { updateNote, deleteNote } = useUpdateNoteMutation();
   
   // Group news by status for Kanban board
   const newsByStatus = useMemo(() => {
@@ -89,6 +91,7 @@ export const NewsProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     setSelectedView,
     updateNewsStatus: handleUpdateStatus,
     toggleFavorite: handleToggleFavorite,
+    // Note actions will be wired in UI components using the mutation hooks
     newsByStatus,
   };
   return <NewsContext.Provider value={value}>{children}</NewsContext.Provider>;

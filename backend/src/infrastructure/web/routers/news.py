@@ -10,6 +10,7 @@ from src.application.use_cases.news import (
     GetUserNewsUseCase,
     ToggleFavoriteUseCase,
     UpdateNewsStatusUseCase,
+    UpdatePersonalNoteUseCase,
 )
 from src.domain.entities.news_item import NewsCategory, NewsStatus
 from src.domain.exceptions.news_exceptions import (
@@ -26,6 +27,7 @@ from src.infrastructure.web.dtos.news_dto import (
     NewsStatsResponseDTO,
     NewsStatusDTO,
     UpdateNewsStatusRequestDTO,
+    UpdatePersonalNoteRequestDTO,
 )
 from src.infrastructure.web.news_mapper import NewsMapper
 
@@ -61,6 +63,12 @@ def get_public_news_use_case() -> GetPublicNewsUseCase:
     """Get public news use case."""
     from src.infrastructure.web.dependencies import get_news_repository
     return GetPublicNewsUseCase(get_news_repository())
+
+
+def get_update_note_use_case() -> UpdatePersonalNoteUseCase:
+    """Get update personal note use case."""
+    from src.infrastructure.web.dependencies import get_news_repository
+    return UpdatePersonalNoteUseCase(get_news_repository())
 
 
 @router.post("", response_model=NewsResponseDTO, status_code=status.HTTP_201_CREATED)
@@ -179,6 +187,41 @@ async def update_news_status(
             status_code=status.HTTP_403_FORBIDDEN,
             detail=str(e),
         )
+
+
+@router.put("/{news_id}/note", response_model=NewsResponseDTO)
+async def update_personal_note(
+    news_id: str,
+    payload: UpdatePersonalNoteRequestDTO,
+    current_user: dict = Depends(get_current_active_user),
+    use_case: UpdatePersonalNoteUseCase = Depends(get_update_note_use_case),
+) -> NewsResponseDTO:
+    """Create or update the personal note for a news item."""
+    try:
+        updated = await use_case.execute(news_id=news_id, user_id=current_user["id"], note=payload.note)
+        return NewsMapper.to_response_dto(updated)
+    except NewsNotFoundException as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+    except UnauthorizedNewsAccessException as e:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=str(e))
+    except ValueError as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+
+
+@router.delete("/{news_id}/note", response_model=NewsResponseDTO)
+async def delete_personal_note(
+    news_id: str,
+    current_user: dict = Depends(get_current_active_user),
+    use_case: UpdatePersonalNoteUseCase = Depends(get_update_note_use_case),
+) -> NewsResponseDTO:
+    """Delete the personal note for a news item (clear it)."""
+    try:
+        updated = await use_case.execute(news_id=news_id, user_id=current_user["id"], note=None)
+        return NewsMapper.to_response_dto(updated)
+    except NewsNotFoundException as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+    except UnauthorizedNewsAccessException as e:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=str(e))
 
 
 @router.patch("/{news_id}/favorite", response_model=NewsResponseDTO)

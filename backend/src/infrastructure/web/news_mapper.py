@@ -34,7 +34,9 @@ class NewsMapper:
             user_id=news_item.user_id,
             is_public=news_item.is_public,
             created_at=news_item.created_at,
-            updated_at=news_item.updated_at
+            updated_at=news_item.updated_at,
+            personal_note=news_item.personal_note,
+            note_updated_at=news_item.note_updated_at,
         )
 
     @staticmethod

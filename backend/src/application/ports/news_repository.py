@@ -135,3 +135,17 @@ class NewsRepository(ABC):
             Count of news items
         """
         pass
+
+    @abstractmethod
+    async def update_personal_note(self, news_id: str, user_id: str, note: Optional[str]) -> NewsItem:
+        """Update or clear personal note for a news item if owned by user.
+
+        Args:
+            news_id: News item identifier
+            user_id: Owner user identifier for authorization
+            note: New note value; if None, clears the note
+
+        Returns:
+            Updated news item
+        """
+        pass

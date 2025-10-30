@@ -1,0 +1,613 @@
+# Engineering Team Development Rules for AI Agents
+
+## Project Overview
+React + FastAPI boilerplate with hexagonal architecture (backend) and feature-based structure (frontend). Focus on type safety, testing, and maintainable patterns.
+
+## AI Agent Behavior
+
+### Primary Objectives
+- Write production-ready, maintainable code
+- Follow established project patterns and architecture
+- Prioritize code quality and consistency over speed
+- Always explain architectural decisions and trade-offs
+- Suggest improvements when detecting anti-patterns
+
+### Communication Style
+- Be concise but thorough in explanations
+- Use technical terminology appropriately
+- Provide context for decisions and recommendations
+- Ask clarifying questions when requirements are ambiguous
+
+## Architecture Enforcement
+
+### Backend (Python + FastAPI)
+- **MANDATORY**: Follow hexagonal architecture strictly
+- **Domain layer**: Pure business logic, no dependencies on infrastructure
+- **Application layer**: Use cases, orchestrate domain operations
+- **Infrastructure layer**: Database, external APIs, web framework
+- **File structure**: `src/{domain,application,infrastructure}/`
+- **Testing**: Each layer tested independently with appropriate mocks
+
+### Frontend (React + TypeScript)
+- **MANDATORY**: Feature-based organization under `src/features/`
+- **Feature structure**: `{feature}/{components,hooks,services,types,__tests__}/`
+- **Shared code**: Core components in `src/core/`, utilities in `src/lib/`
+- **State management**: React Query for server state, Context/useState for local state
+- **Testing**: React Testing Library with comprehensive test coverage
+
+## Code Quality Standards
+
+### TypeScript/JavaScript Rules
+```typescript
+// GOOD: Explicit types, clear naming
+interface UserProfile {
+  id: string;
+  email: string;
+  displayName: string;
+}
+
+const getUserProfile = async (userId: string): Promise<UserProfile> => {
+  // Implementation
+};
+
+// BAD: Implicit any, unclear naming
+const getUser = async (id) => {
+  // Implementation
+};
+```
+
+### Python Rules
+```python
+# GOOD: Type hints, explicit exceptions
+from typing import Optional
+from src.domain.entities.user import User
+from src.domain.exceptions.user import UserNotFoundError
+
+class UserRepository:
+    async def get_by_id(self, user_id: str) -> Optional[User]:
+        # Implementation
+        
+    async def get_by_id_or_fail(self, user_id: str) -> User:
+        user = await self.get_by_id(user_id)
+        if not user:
+            raise UserNotFoundError(f"User {user_id} not found")
+        return user
+
+# BAD: No types, generic exceptions
+class UserRepository:
+    async def get_by_id(self, user_id):
+        # Implementation
+```
+
+### Naming Conventions (STRICT)
+- **Python**: `snake_case` for functions/variables, `PascalCase` for classes
+- **TypeScript**: `camelCase` for functions/variables, `PascalCase` for components/types
+- **Files**: `kebab-case` for components, `snake_case` for Python modules
+- **Constants**: `UPPER_SNAKE_CASE` in both languages
+- **Interfaces**: Prefix with `I` only when needed for disambiguation
+
+## Testing Requirements (NON-NEGOTIABLE)
+
+### Backend Testing
+```python
+# Unit test example - domain layer
+def test_user_change_password_validates_strength():
+    user = User(email="test@example.com", password_hash="old_hash")
+    
+    with pytest.raises(WeakPasswordError):
+        user.change_password("123")  # Too weak
+        
+    user.change_password("StrongPassword123!")
+    assert user.password_hash != "old_hash"
+
+# Integration test example - application layer
+@pytest.mark.asyncio
+async def test_update_user_use_case_updates_repository():
+    # Given
+    user_repo = MockUserRepository()
+    use_case = UpdateUserUseCase(user_repo)
+    
+    # When
+    result = await use_case.execute(UpdateUserRequest(
+        user_id="123",
+        display_name="New Name"
+    ))
+    
+    # Then
+    assert result.success
+    assert user_repo.saved_user.display_name == "New Name"
+```
+
+### Frontend Testing
+```typescript
+// Component test example
+import { render, screen, fireEvent } from '@testing-library/react';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { ProfileEdit } from '../ProfileEdit';
+
+test('should update profile when form is submitted', async () => {
+  const queryClient = new QueryClient({
+    defaultOptions: { queries: { retry: false } }
+  });
+  
+  render(
+    <QueryClientProvider client={queryClient}>
+      <ProfileEdit userId="123" />
+    </QueryClientProvider>
+  );
+  
+  fireEvent.change(screen.getByLabelText(/display name/i), {
+    target: { value: 'New Name' }
+  });
+  
+  fireEvent.click(screen.getByRole('button', { name: /save/i }));
+  
+  expect(await screen.findByText(/profile updated/i)).toBeInTheDocument();
+});
+
+// Hook test example
+import { renderHook } from '@testing-library/react';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { useProfile } from '../useProfile';
+
+test('useProfile should return user data', async () => {
+  const queryClient = new QueryClient();
+  const wrapper = ({ children }) => (
+    <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+  );
+  
+  const { result } = renderHook(() => useProfile('123'), { wrapper });
+  
+  await waitFor(() => {
+    expect(result.current.data).toBeDefined();
+  });
+});
+```
+
+## Error Handling Patterns
+
+### Backend Error Handling
+```python
+# Domain exceptions
+class DomainException(Exception):
+    """Base exception for domain layer"""
+    pass
+
+class UserNotFoundError(DomainException):
+    """Raised when user cannot be found"""
+    pass
+
+# Application layer error handling
+from src.application.common.result import Result, Success, Failure
+
+class UpdateUserUseCase:
+    async def execute(self, request: UpdateUserRequest) -> Result[UserResponse]:
+        try:
+            user = await self.user_repo.get_by_id_or_fail(request.user_id)
+            user.update_profile(request.display_name)
+            await self.user_repo.save(user)
+            return Success(UserResponse.from_entity(user))
+        except UserNotFoundError as e:
+            return Failure(str(e))
+        except Exception as e:
+            logger.error(f"Unexpected error updating user: {e}")
+            return Failure("Internal server error")
+```
+
+### Frontend Error Handling
+```typescript
+// Error boundary for components
+export class ErrorBoundary extends Component<Props, State> {
+  constructor(props: Props) {
+    super(props);
+    this.state = { hasError: false };
+  }
+
+  static getDerivedStateFromError(): State {
+    return { hasError: true };
+  }
+
+  componentDidCatch(error: Error, errorInfo: ErrorInfo) {
+    logger.error('Component error:', error, errorInfo);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return <ErrorFallback onRetry={() => this.setState({ hasError: false })} />;
+    }
+    return this.props.children;
+  }
+}
+
+// Service error handling
+export const profileService = {
+  async updateProfile(data: UpdateProfileRequest): Promise<UserProfile> {
+    try {
+      const response = await api.put(`/users/${data.userId}`, data);
+      return response.data;
+    } catch (error) {
+      if (error.response?.status === 404) {
+        throw new Error('User not found');
+      }
+      if (error.response?.status === 400) {
+        throw new Error(error.response.data.message || 'Invalid data');
+      }
+      throw new Error('Failed to update profile');
+    }
+  }
+};
+```
+
+## Git and Development Workflow
+
+### Branch Naming
+- Features: `feature/TICKET-123-short-description`
+- Bug fixes: `fix/bug-description`
+- Hotfixes: `hotfix/critical-issue`
+
+### Commit Messages
+```bash
+# GOOD
+feat(auth): add password reset functionality
+fix(profile): resolve email validation issue
+refactor(news): extract news service methods
+test(users): add integration tests for user creation
+
+# BAD
+updated stuff
+fix bug
+changes
+wip
+```
+
+### Pull Request Requirements
+- Clear description with context and rationale
+- Link to relevant tickets/issues
+- Test plan and validation steps
+- Screenshots for UI changes
+- All CI checks passing
+- Minimum 2 reviewer approvals
+
+## Performance Guidelines
+
+### Frontend Performance
+- Use React.memo for expensive components
+- Implement code splitting with React.lazy
+- Optimize bundle size with proper tree shaking
+- Use proper dependency arrays in useEffect/useCallback
+- Implement virtual scrolling for large lists
+
+### Backend Performance
+- Use async/await for I/O operations
+- Implement proper database indexing
+- Use connection pooling for database connections
+- Cache expensive computations
+- Profile and monitor critical endpoints
+
+## Security Standards
+
+### Authentication & Authorization
+- JWT tokens with appropriate expiration times
+- Secure session management
+- Role-based access control (RBAC)
+- Input validation and sanitization
+- HTTPS only in production
+
+### Data Protection
+- Encrypt sensitive data at rest
+- Use parameterized queries to prevent SQL injection
+- Implement rate limiting for API endpoints
+- Validate and sanitize all user inputs
+- Secure error messages (no sensitive data exposure)
+
+## Documentation Requirements
+
+### Code Documentation
+- Document complex business logic with inline comments
+- Use docstrings for Python functions/classes
+- Use JSDoc for complex TypeScript functions
+- Maintain updated README files
+- Document API endpoints with OpenAPI/Swagger
+
+### Architecture Documentation
+- Document major architectural decisions
+- Maintain sequence diagrams for complex flows
+- Keep database schema documentation current
+- Document deployment and configuration procedures
+
+### Living Documentation Rules (MANDATORY)
+
+#### Documentation Updates Triggers
+```markdown
+# WHEN to update documentation (AI agents MUST enforce):
+
+1. **Code changes affecting public APIs**
+   - Update OpenAPI/Swagger specs immediately
+   - Update README if usage patterns change
+   - Update inline docs for modified functions
+
+2. **Architectural decisions**
+   - Document in ADR (Architecture Decision Records)
+   - Update system diagrams if structure changes
+   - Update .cursorrules if patterns evolve
+
+3. **Workflow changes**
+   - Update this .cursorrules file when team processes change
+   - Update CI/CD docs when deployment processes change
+   - Update testing strategies when new patterns emerge
+
+4. **New dependencies or tools**
+   - Update package.json/pyproject.toml with reasoning
+   - Document setup instructions in README
+   - Update development environment docs
+```
+
+#### Documentation Validation Checklist
+```markdown
+# Before merging ANY code change, verify:
+
+- [ ] README still accurate for setup/usage?
+- [ ] API docs reflect endpoint changes?
+- [ ] Architecture diagrams current?
+- [ ] This .cursorrules file needs updates?
+- [ ] New patterns documented in code?
+- [ ] Breaking changes documented?
+```
+
+#### Automated Documentation Rules
+```python
+# Example: API documentation auto-generation
+# Backend: FastAPI automatically generates OpenAPI docs
+# Frontend: TypeScript interfaces should be exported for doc generation
+
+# ENFORCE: All public functions must have docstrings
+def create_user(user_data: CreateUserRequest) -> User:
+    """
+    Creates a new user in the system.
+    
+    Args:
+        user_data: User creation data including email and profile info
+        
+    Returns:
+        User: The created user entity
+        
+    Raises:
+        UserAlreadyExistsError: If user with email already exists
+        ValidationError: If user_data is invalid
+        
+    Example:
+        >>> user = create_user(CreateUserRequest(email="test@example.com"))
+        >>> print(user.id)
+    """
+```
+
+#### Documentation Decay Prevention
+```typescript
+// Frontend: Component documentation example
+/**
+ * ProfileEdit - User profile editing component
+ * 
+ * @component
+ * @example
+ * // Basic usage
+ * <ProfileEdit userId="123" onSave={handleSave} />
+ * 
+ * @param {string} userId - The ID of the user to edit
+ * @param {Function} onSave - Callback when profile is saved
+ * @param {boolean} isLoading - Loading state indicator
+ * 
+ * @since 1.2.0
+ * @updated 2025-09-19 - Added validation for display name
+ */
+export const ProfileEdit: React.FC<ProfileEditProps> = ({ userId, onSave, isLoading }) => {
+  // Implementation
+};
+```
+
+#### Self-Updating Documentation Strategy
+```bash
+# Git hooks for documentation validation
+# .git/hooks/pre-commit (example)
+#!/bin/bash
+
+# Check if API endpoints changed but OpenAPI not updated
+if git diff --cached --name-only | grep -E "(router|endpoint)" && \
+   ! git diff --cached --name-only | grep -E "(openapi|swagger)"; then
+    echo "ERROR: API endpoints changed but OpenAPI docs not updated"
+    exit 1
+fi
+
+# Check if .cursorrules needs update based on code patterns
+if git diff --cached | grep -E "(new pattern|TODO.*doc)" > /dev/null; then
+    echo "WARNING: Consider updating .cursorrules with new patterns"
+fi
+```
+
+## AI Agent Decision Making
+
+### When to Suggest Refactoring
+- Code duplication across multiple files
+- Functions exceeding 50 lines
+- Deeply nested conditional logic (>3 levels)
+- Missing error handling
+- Poor separation of concerns
+
+### When to Ask for Clarification
+- Requirements seem ambiguous or conflicting
+- Multiple implementation approaches are viable
+- Changes would affect existing functionality significantly
+- Security implications are unclear
+
+### Code Review Focus Areas
+1. **Architecture compliance**: Does it follow hexagonal/feature-based patterns?
+2. **Error handling**: Are edge cases properly handled?
+3. **Testing**: Is there adequate test coverage?
+4. **Performance**: Any obvious bottlenecks or inefficiencies?
+5. **Security**: Are there potential vulnerabilities?
+6. **Maintainability**: Is the code readable and well-structured?
+
+### Documentation Maintenance Enforcement
+**AI agents MUST proactively suggest documentation updates when:**
+- Detecting new patterns in code that aren't documented
+- Finding inconsistencies between code and documentation
+- Observing repeated manual processes that should be automated
+- Identifying workflow improvements during development
+
+## Self-Evolving Rules System
+
+### .cursorrules Evolution Strategy
+```markdown
+# This file should evolve with the team and project
+
+1. **Pattern Detection**: AI agents should identify when new patterns emerge
+2. **Rule Proposals**: Suggest additions to this file when:
+   - New architectural patterns are consistently used
+   - Team preferences become clear through code reviews
+   - Performance bottlenecks reveal new guidelines needed
+   - Security concerns create new requirements
+
+3. **Quarterly Reviews**: Schedule updates to this file every 3 months
+4. **Emergency Updates**: Immediate updates for critical security or architecture changes
+```
+
+### Workflow Evolution Triggers
+```python
+# When AI detects these patterns, suggest rule updates:
+
+RULE_UPDATE_TRIGGERS = {
+    "new_dependency_patterns": [
+        "team consistently choosing specific libraries",
+        "performance improvements from specific approaches",
+        "security enhancements from new tools"
+    ],
+    "architectural_evolution": [
+        "new layer abstractions",
+        "changed directory structures",
+        "evolved testing strategies"
+    ],
+    "team_preferences": [
+        "coding style consensus in PRs",
+        "repeated feedback patterns",
+        "tooling adoption trends"
+    ]
+}
+```
+
+### Meta-Documentation Rules
+```typescript
+// Rules for updating the rules themselves
+
+interface RuleEvolution {
+  trigger: 'pattern_detected' | 'team_feedback' | 'performance_issue' | 'security_concern';
+  evidence: string[];
+  proposedChange: string;
+  impact: 'low' | 'medium' | 'high';
+  requiresTeamDiscussion: boolean;
+}
+
+// Example: AI should propose this when detecting consistent patterns
+const proposeRuleUpdate = (evolution: RuleEvolution) => {
+  if (evolution.impact === 'high' || evolution.requiresTeamDiscussion) {
+    // Flag for team review
+    console.log(`🚨 Propose .cursorrules update: ${evolution.proposedChange}`);
+  } else {
+    // Auto-suggest in PR comments
+    console.log(`💡 Consider updating documentation: ${evolution.proposedChange}`);
+  }
+};
+```
+
+### Change Detection Automation
+```bash
+# Script to detect when rules might need updates
+# .github/workflows/rules-evolution.yml
+
+name: Documentation Evolution Check
+on:
+  pull_request:
+    branches: [main]
+
+jobs:
+  check-rules-evolution:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check for new patterns
+        run: |
+          # Detect if new architectural patterns emerge
+          if git diff --name-only | grep -E "src/(new-domain|new-feature)" > /dev/null; then
+            echo "::warning::New domain/feature detected - consider updating .cursorrules"
+          fi
+          
+          # Detect repeated code review comments (suggests missing rule)
+          if git log --grep="consider" --grep="should" --since="1 month ago" | wc -l > 10; then
+            echo "::warning::Repeated suggestions detected - consider codifying in .cursorrules"
+          fi
+```
+
+## Quality Gates
+
+### Pre-commit Requirements
+- [ ] All tests passing
+- [ ] No linter errors
+- [ ] Type checking passes
+- [ ] Code formatted correctly
+- [ ] No hardcoded secrets or credentials
+
+### Pre-merge Requirements
+- [ ] Peer review completed
+- [ ] Integration tests passing
+- [ ] Documentation updated
+- [ ] No security vulnerabilities detected
+- [ ] Performance impact assessed
+
+---
+
+## Rule Evolution and Maintenance
+
+### Version Control for Rules
+- **Current version**: 1.0.0 (September 2025)
+- **Last major update**: September 19, 2025
+- **Next scheduled review**: December 2025
+
+### Update History
+```markdown
+# Keep track of major changes to this file
+
+## v1.0.0 (2025-09-19)
+- Initial comprehensive rules setup
+- Added living documentation requirements
+- Implemented self-evolving rules system
+- Added automation for documentation validation
+
+## Future versions should document:
+- What changed and why
+- Impact on existing workflows
+- Migration steps if needed
+```
+
+### Emergency Rule Updates
+```typescript
+// When immediate updates are needed (security, critical bugs, etc.)
+interface EmergencyUpdate {
+  reason: 'security_vulnerability' | 'critical_bug' | 'architecture_breaking_change';
+  immediateAction: string;
+  followUpRequired: boolean;
+  teamNotificationRequired: boolean;
+}
+
+// Process: Update rule immediately, notify team, schedule review
+```
+
+### Continuous Improvement Mindset
+**Remember**: These rules are living guidelines that should evolve with the team and project. AI agents should:
+
+1. **Actively suggest improvements** when they detect better patterns
+2. **Question outdated rules** when technology or team practices evolve  
+3. **Propose new rules** when gaps in guidance are discovered
+4. **Validate rule effectiveness** by monitoring code quality metrics
+
+**Core Principle**: Prioritize clarity and maintainability over cleverness or premature optimization. When in doubt, choose the approach that makes the codebase more understandable and maintainable for the team.
+
+---
+
+*"Rules should serve the team, not the other way around. Evolve them as the team and project mature."*

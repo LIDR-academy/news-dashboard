@@ -37,6 +37,9 @@ class NewsItem:
     is_favorite: bool = False
     created_at: Optional[datetime] = datetime.utcnow()
     updated_at: Optional[datetime] = datetime.utcnow()
+    # Personal note fields
+    personal_note: Optional[str] = None
+    note_updated_at: Optional[datetime] = None
 
     def __post_init__(self):
         """Validate the news item entity."""
@@ -99,3 +102,31 @@ class NewsItem:
     def can_be_accessed_by(self, user_id: str) -> bool:
         """Check if the news item can be accessed by a user."""
         return self.is_public or self.user_id == user_id
+
+    def update_personal_note(self, note: str) -> None:
+        """Update the personal note for this news item.
+
+        Applies simple validation and normalization:
+        - Strips whitespace
+        - Enforces maximum length of 500 characters
+        """
+        if note is None:
+            raise ValueError("Note cannot be None. Use clear_personal_note to remove it.")
+
+        normalized = note.strip()
+        if len(normalized) == 0:
+            raise ValueError("Note cannot be empty")
+        if len(normalized) > 500:
+            raise ValueError("Note cannot exceed 500 characters")
+
+        self.personal_note = normalized
+        now = datetime.utcnow()
+        self.note_updated_at = now
+        self.updated_at = now
+
+    def clear_personal_note(self) -> None:
+        """Clear the personal note for this news item."""
+        self.personal_note = None
+        now = datetime.utcnow()
+        self.note_updated_at = None
+        self.updated_at = now

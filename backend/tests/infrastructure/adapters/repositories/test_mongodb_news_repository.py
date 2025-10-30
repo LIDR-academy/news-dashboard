@@ -103,6 +103,8 @@ class TestMongoDBNewsRepository:
         assert result.is_public is True
         assert result.status == NewsStatus.PENDING
         assert result.is_favorite is False
+        # Note fields default
+        assert result.personal_note is None or isinstance(result.personal_note, str)
 
     def test_to_domain_returns_none_when_document_is_none(self, repository):
         """Test that _to_domain returns None when document is None."""
@@ -164,6 +166,9 @@ class TestMongoDBNewsRepository:
         assert result["status"] == "pending"
         assert result["is_favorite"] is False
         assert "_id" not in result  # Should be excluded
+        # Note fields present
+        assert "personal_note" in result
+        assert "note_updated_at" in result
 
     def test_to_document_excludes_id_when_news_has_no_id(self, repository):
         """Test that _to_document excludes _id when news item has no id."""
@@ -375,6 +380,17 @@ class TestMongoDBNewsRepository:
         """Test that repository can be initialized."""
         repository = MongoDBNewsRepository(mock_database)
         assert repository is not None
+
+    async def test_update_personal_note_updates_doc_and_returns_entity(
+        self, repository, mock_collection, sample_news_document
+    ):
+        news_id = str(sample_news_document["_id"]) if isinstance(sample_news_document["_id"], ObjectId) else "507f1f77bcf86cd799439011"
+        sample_news_document["_id"] = ObjectId(news_id)
+        mock_collection.find_one.return_value = sample_news_document
+
+        updated = await repository.update_personal_note(news_id, "user123", "hello")
+        assert isinstance(updated, NewsItem)
+        mock_collection.update_one.assert_called_once()
 
     async def test_methods_handle_invalid_object_id_gracefully(
         self, repository, mock_collection

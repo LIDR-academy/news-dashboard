@@ -6,6 +6,7 @@ import type {
   NewsListResponse,
   NewsStats,
   UpdateNewsStatusRequest,
+  UpdatePersonalNoteRequest,
 } from './news.schema';
 
 export const newsService = {
@@ -45,6 +46,16 @@ export const newsService = {
 
   async toggleFavorite(newsId: string): Promise<NewsItem> {
     const response = await apiClient.patch<NewsItem>(`/api/news/${newsId}/favorite`);
+    return response;
+  },
+
+  async updatePersonalNote(newsId: string, data: UpdatePersonalNoteRequest): Promise<NewsItem> {
+    const response = await apiClient.put<NewsItem>(`/api/news/${newsId}/note`, data);
+    return response;
+  },
+
+  async deletePersonalNote(newsId: string): Promise<NewsItem> {
+    const response = await apiClient.delete<NewsItem>(`/api/news/${newsId}/note`);
     return response;
   },
 

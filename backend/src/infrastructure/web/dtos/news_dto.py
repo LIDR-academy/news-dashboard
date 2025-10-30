@@ -86,6 +86,8 @@ class NewsResponseDTO(BaseModel):
     is_public: bool
     created_at: datetime
     updated_at: Optional[datetime]
+    personal_note: Optional[str] = None
+    note_updated_at: Optional[datetime] = None
 
     class Config:
         json_schema_extra = {
@@ -103,6 +105,9 @@ class NewsResponseDTO(BaseModel):
                 "is_public": False,
                 "created_at": "2024-01-01T00:00:00Z",
                 "updated_at": "2024-01-01T00:00:00Z"
+            ,
+            "personal_note": "Remember to share with team",
+            "note_updated_at": "2024-01-01T00:00:00Z"
             }
         }
 
@@ -113,6 +118,11 @@ class NewsListResponseDTO(BaseModel):
     total: int
     offset: int
     limit: int
+
+
+class UpdatePersonalNoteRequestDTO(BaseModel):
+    """DTO for updating personal note on a news item."""
+    note: str = Field(max_length=500, description="Personal note content")
 
 
 class NewsStatsResponseDTO(BaseModel):

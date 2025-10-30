@@ -32,6 +32,9 @@ class MongoDBNewsRepository(NewsRepository):
         self.collection.create_index([("category", 1)])
         self.collection.create_index([("created_at", DESCENDING)])
         self.collection.create_index([("link", 1), ("user_id", 1)], unique=True)
+        # Indexes to support note queries/ownership filters
+        self.collection.create_index([("user_id", 1), ("_id", 1)])
+        self.collection.create_index([("user_id", 1), ("personal_note", 1)])
 
     def _to_domain(self, doc: dict) -> Optional[NewsItem]:
         """Convert MongoDB document to domain entity."""
@@ -51,7 +54,9 @@ class MongoDBNewsRepository(NewsRepository):
             status=NewsStatus(doc["status"]),
             is_favorite=doc.get("is_favorite", False),
             created_at=doc.get("created_at"),
-            updated_at=doc.get("updated_at")
+            updated_at=doc.get("updated_at"),
+            personal_note=doc.get("personal_note"),
+            note_updated_at=doc.get("note_updated_at"),
         )
 
     def _to_document(self, news_item: NewsItem) -> dict:
@@ -67,7 +72,9 @@ class MongoDBNewsRepository(NewsRepository):
             "is_public": news_item.is_public,
             "status": news_item.status.value,
             "is_favorite": news_item.is_favorite,
-            "updated_at": news_item.updated_at or datetime.utcnow()
+            "updated_at": news_item.updated_at or datetime.utcnow(),
+            "personal_note": news_item.personal_note,
+            "note_updated_at": news_item.note_updated_at,
         }
 
         if news_item.created_at:
@@ -182,3 +189,23 @@ class MongoDBNewsRepository(NewsRepository):
             "user_id": user_id,
             "status": status.value
         })
+
+    async def update_personal_note(self, news_id: str, user_id: str, note: Optional[str]) -> NewsItem:
+        """Update or clear the personal note atomically with ownership filter."""
+        now = datetime.utcnow()
+        update_payload = {
+            "$set": {
+                "updated_at": now,
+                "note_updated_at": now if note is not None else None,
+                "personal_note": note,
+            }
+        }
+
+        await self.collection.update_one(
+            {"_id": ObjectId(news_id), "user_id": user_id},
+            update_payload,
+        )
+
+        # Return the updated document
+        doc = await self.collection.find_one({"_id": ObjectId(news_id)})
+        return self._to_domain(doc)

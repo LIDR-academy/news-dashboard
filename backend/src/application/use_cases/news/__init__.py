@@ -5,6 +5,7 @@ from .get_public_news_use_case import GetPublicNewsUseCase
 from .get_user_news_use_case import GetUserNewsUseCase
 from .toggle_favorite_use_case import ToggleFavoriteUseCase
 from .update_news_status_use_case import UpdateNewsStatusUseCase
+from .update_note_use_case import UpdatePersonalNoteUseCase
 
 __all__ = [
     "CreateNewsUseCase",
@@ -12,4 +13,5 @@ __all__ = [
     "GetUserNewsUseCase",
     "ToggleFavoriteUseCase",
     "UpdateNewsStatusUseCase",
+    "UpdatePersonalNoteUseCase",
 ]
