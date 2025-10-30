@@ -3,10 +3,14 @@ import { CSS } from '@dnd-kit/utilities';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Heart, ExternalLink } from 'lucide-react';
+import { Heart, ExternalLink, NotebookPen } from 'lucide-react';
 import { useNewsContext } from '../hooks/useNewsContext';
 import { CATEGORY_COLORS, STATUS_COLORS, type NewsItem } from '../data/news.schema';
 import { cn } from '@/lib/utils';
+import { useState } from 'react';
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Textarea } from '@/components/ui/textarea';
+import { useUpdateNoteMutation } from '../hooks/mutations/useUpdateNote.mutation';
 
 interface NewsCardProps {
   item: NewsItem;
@@ -15,6 +19,9 @@ interface NewsCardProps {
 
 export const NewsCard = ({ item, isDragging = false }: NewsCardProps) => {
   const { toggleFavorite } = useNewsContext();
+  const { updateNote, deleteNote, isUpdating, isDeleting } = useUpdateNoteMutation();
+  const [open, setOpen] = useState(false);
+  const [note, setNote] = useState<string>(item.personal_note ?? '');
   const {
     attributes,
     listeners,
@@ -37,6 +44,26 @@ export const NewsCard = ({ item, isDragging = false }: NewsCardProps) => {
   const handleLinkClick = (e: React.MouseEvent) => {
     e.stopPropagation();
     window.open(item.link, '_blank', 'noopener,noreferrer');
+  };
+
+  const handleOpenNotes = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setNote(item.personal_note ?? '');
+    setOpen(true);
+  };
+
+  const handleSaveNote = () => {
+    updateNote(
+      { newsId: item.id, note },
+      { onSuccess: () => setOpen(false) }
+    );
+  };
+
+  const handleDeleteNote = () => {
+    deleteNote(
+      { newsId: item.id },
+      { onSuccess: () => setOpen(false) }
+    );
   };
 
   return (
@@ -63,6 +90,14 @@ export const NewsCard = ({ item, isDragging = false }: NewsCardProps) => {
               <p className="text-xs text-muted-foreground mt-1">{item.source}</p>
             </div>
             <div className="flex items-center gap-1">
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-7 w-7"
+                onClick={handleOpenNotes}
+              >
+                <NotebookPen className="h-4 w-4" />
+              </Button>
               <Button
                 variant="ghost"
                 size="icon"
@@ -116,8 +151,49 @@ export const NewsCard = ({ item, isDragging = false }: NewsCardProps) => {
               loading="lazy"
             />
           )}
+
+          {item.personal_note && (
+            <div className="mt-3 rounded border bg-muted/40 p-2">
+              <p className="text-[11px] uppercase tracking-wide text-muted-foreground mb-1">Personal note</p>
+              <p className="text-sm whitespace-pre-wrap">{item.personal_note}</p>
+            </div>
+          )}
         </CardContent>
       </Card>
+
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogTrigger asChild>
+          <span className="hidden" />
+        </DialogTrigger>
+        <DialogContent onOpenAutoFocus={(e) => e.preventDefault()}>
+          <DialogHeader>
+            <DialogTitle>Edit personal note</DialogTitle>
+          </DialogHeader>
+          <div>
+            <Textarea
+              value={note}
+              onChange={(e) => setNote(e.target.value)}
+              placeholder="Write your note…"
+              className="min-h-32"
+            />
+          </div>
+          <DialogFooter>
+            <Button
+              variant="secondary"
+              onClick={handleDeleteNote}
+              disabled={isDeleting}
+            >
+              {isDeleting ? 'Deleting…' : 'Delete note'}
+            </Button>
+            <Button
+              onClick={handleSaveNote}
+              disabled={isUpdating}
+            >
+              {isUpdating ? 'Saving…' : 'Save note'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
