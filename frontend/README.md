@@ -26,6 +26,10 @@ A modern React TypeScript frontend for the News Management system, built with fe
 
 ### User Interface
 - **Dark/Light Mode**: Theme switching with system preference detection
+  - Toggle available in the profile page
+  - Persists preference across browser sessions
+  - Automatically respects system theme by default
+  - Smooth transitions between themes
 - **Responsive Design**: Mobile-first approach with desktop enhancements
 - **Accessibility**: ARIA labels, keyboard navigation, screen reader support
 - **Loading States**: Skeleton loaders and loading indicators
@@ -178,6 +182,33 @@ npm run test:coverage
 # Interactive test UI
 npm run test:ui
 ```
+
+## Theme Support
+
+The application includes a complete dark mode implementation using `next-themes`.
+
+### Features
+- **Theme Toggle**: Available in the user profile page
+- **System Preference**: Automatically detects and respects OS theme settings
+- **Persistence**: Theme preference is saved to localStorage
+- **Smooth Transitions**: CSS transitions for a polished experience
+- **Accessibility**: Proper ARIA labels and keyboard navigation
+
+### Usage
+
+The theme toggle is integrated into the profile page. Users can:
+1. Navigate to `/profile`
+2. Use the theme toggle switch in the settings section
+3. Choose between light and dark modes
+
+The theme preference is stored using the localStorage key `theme` and persists across sessions.
+
+### Implementation Details
+
+- **ThemeProvider**: Wraps the entire app in `main.tsx`
+- **ThemeToggle Component**: Reusable component at `src/core/components/ThemeToggle.tsx`
+- **CSS Variables**: Theme colors defined in `src/index.css`
+- **Tailwind Configuration**: Dark mode enabled with `class` strategy
 
 ## Configuration
 

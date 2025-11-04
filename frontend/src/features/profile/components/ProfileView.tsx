@@ -3,8 +3,8 @@ import { useProfile } from '../hooks/useProfile';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../../components/ui/card';
 import { Button } from '../../../components/ui/button';
 import { Badge } from '../../../components/ui/badge';
-import { BackButton } from '../../../core/components/BackButton';
-import { CalendarDays, Mail, User, Shield, Edit, Key } from 'lucide-react';
+import { BackButton, ThemeToggle } from '../../../core/components';
+import { CalendarDays, Mail, User, Shield, Edit, Key, Settings } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { Skeleton } from '../../../components/ui/skeleton';
 
@@ -120,6 +120,18 @@ export const ProfileView: React.FC = () => {
                 </div>
               </div>
             </div>
+          </div>
+
+          {/* Theme Settings */}
+          <div className="flex items-center justify-between p-4 border rounded-lg">
+            <div className="flex items-center gap-3">
+              <Settings className="h-5 w-5 text-gray-500" />
+              <div>
+                <div className="font-medium">Theme Preference</div>
+                <div className="text-sm text-gray-600 dark:text-gray-400">Choose your preferred color theme</div>
+              </div>
+            </div>
+            <ThemeToggle />
           </div>
 
           {/* Created Date */}

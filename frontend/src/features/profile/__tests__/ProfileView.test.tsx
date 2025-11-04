@@ -37,6 +37,12 @@ jest.mock('lucide-react', () => ({
   CalendarDays: () => <div data-testid="calendar-icon" />,
   Edit: () => <div data-testid="edit-icon" />,
   Key: () => <div data-testid="key-icon" />,
+  Settings: () => <div data-testid="settings-icon" />,
+}));
+
+jest.mock('../../../core/components', () => ({
+  BackButton: () => <div data-testid="back-button">Back</div>,
+  ThemeToggle: () => <div data-testid="theme-toggle">Theme Toggle</div>,
 }));
 
 const createTestQueryClient = () => new QueryClient({
@@ -157,6 +163,23 @@ describe('ProfileView', () => {
       // Check that dates are formatted (exact format may vary by locale)
       expect(screen.getByText(/January 1, 2023/)).toBeInTheDocument();
       expect(screen.getByText(/January 2, 2023/)).toBeInTheDocument();
+    });
+  });
+
+  it('renders theme settings section', async () => {
+    mockUseProfile.mockReturnValue({
+      data: mockProfile,
+      isLoading: false,
+      error: null,
+    } as any);
+
+    renderWithProviders(<ProfileView />);
+
+    await waitFor(() => {
+      expect(screen.getByText('Theme Preference')).toBeInTheDocument();
+      expect(screen.getByText('Choose your preferred color theme')).toBeInTheDocument();
+      expect(screen.getByTestId('settings-icon')).toBeInTheDocument();
+      expect(screen.getByTestId('theme-toggle')).toBeInTheDocument();
     });
   });
 });
