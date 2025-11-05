@@ -3,7 +3,7 @@ import { useAuthContext } from "@/features/auth/hooks/useAuthContext";
 import { LogOut, Package } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
-const Header = ({ children }: { children: React.ReactNode }) => {
+export const Header = ({ children }: { children: React.ReactNode }) => {
   const { logout } = useAuthContext();
   const navigate = useNavigate();
   const handleLogout = async () => {
@@ -53,5 +53,3 @@ const Header = ({ children }: { children: React.ReactNode }) => {
     </header>
   );
 };
-
-export default Header;
