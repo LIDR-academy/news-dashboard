@@ -16,7 +16,7 @@ import { NewsCard } from './NewsCard';
 import { NewsMobileView } from './NewsMobileView';
 import { NewsFilters } from './NewsFilters';
 import { NewsStats } from './NewsStats';
-import { NewsStatus, type NewsItem } from '../data/news.schema';
+import { NewsStatus } from '../data/news.schema';
 
 export const NewsBoard = () => {
   const { newsByStatus, updateNewsStatus, isLoading } = useNewsContext();
@@ -57,15 +57,18 @@ export const NewsBoard = () => {
     if (!over) return;
 
     const newsId = active.id as string;
-    const newStatus = over.id as NewsStatus;
     
-    // Find the news item
-    const allNews = [
-      ...newsByStatus.pending,
-      ...newsByStatus.reading,
-      ...newsByStatus.read,
-    ];
-    const newsItem = allNews.find(item => item.id === newsId);
+    // If dropped on column, use its status directly
+    // If dropped on item, find which column that item belongs to
+    const newStatus = over.data.current?.type === 'column'
+      ? over.data.current.status as NewsStatus
+      : [...newsByStatus.pending, ...newsByStatus.reading, ...newsByStatus.read]
+          .find(item => item.id === over.id)?.status;
+    
+    if (!newStatus) return;
+    
+    const newsItem = [...newsByStatus.pending, ...newsByStatus.reading, ...newsByStatus.read]
+      .find(item => item.id === newsId);
     
     if (newsItem && newsItem.status !== newStatus) {
       updateNewsStatus(newsId, newStatus);

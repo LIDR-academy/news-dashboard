@@ -26,6 +26,10 @@ const statusColors = {
 export const NewsColumn = ({ title, status, items, count }: NewsColumnProps) => {
   const { setNodeRef, isOver } = useDroppable({
     id: status,
+    data: {
+      type: 'column',
+      status: status
+    }
   });
 
   return (
