@@ -18,9 +18,9 @@ interface NewsColumnProps {
 }
 
 const statusColors = {
-  [NewsStatus.PENDING]: 'bg-yellow-100 border-yellow-400 text-yellow-900',
-  [NewsStatus.READING]: 'bg-blue-100 border-blue-400 text-blue-900',
-  [NewsStatus.READ]: 'bg-green-100 border-green-400 text-green-900',
+  [NewsStatus.PENDING]: 'bg-yellow-100 border-yellow-400 text-yellow-900 dark:bg-yellow-900/30 dark:border-yellow-600 dark:text-yellow-100',
+  [NewsStatus.READING]: 'bg-blue-100 border-blue-400 text-blue-900 dark:bg-blue-900/30 dark:border-blue-600 dark:text-blue-100',
+  [NewsStatus.READ]: 'bg-green-100 border-green-400 text-green-900 dark:bg-green-900/30 dark:border-green-600 dark:text-green-100',
 };
 
 export const NewsColumn = ({ title, status, items, count }: NewsColumnProps) => {
