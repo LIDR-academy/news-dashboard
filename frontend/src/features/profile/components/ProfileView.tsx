@@ -48,7 +48,7 @@ export const ProfileView: React.FC = () => {
       <div className="container mx-auto px-4 py-8 max-w-2xl">
         <Card>
           <CardContent className="pt-6">
-            <div className="text-center text-gray-600">
+            <div className="text-center text-muted-foreground">
               No profile data available.
             </div>
           </CardContent>
@@ -88,10 +88,10 @@ export const ProfileView: React.FC = () => {
           {/* Username */}
           <div className="flex items-center justify-between p-4 border rounded-lg">
             <div className="flex items-center gap-3">
-              <User className="h-5 w-5 text-gray-500" />
+              <User className="h-5 w-5 text-muted-foreground" />
               <div>
                 <div className="font-medium">Username</div>
-                <div className="text-sm text-gray-600">{profile.username}</div>
+                <div className="text-sm text-muted-foreground">{profile.username}</div>
               </div>
             </div>
           </div>
@@ -99,10 +99,10 @@ export const ProfileView: React.FC = () => {
           {/* Email */}
           <div className="flex items-center justify-between p-4 border rounded-lg">
             <div className="flex items-center gap-3">
-              <Mail className="h-5 w-5 text-gray-500" />
+              <Mail className="h-5 w-5 text-muted-foreground" />
               <div>
                 <div className="font-medium">Email Address</div>
-                <div className="text-sm text-gray-600">{profile.email}</div>
+                <div className="text-sm text-muted-foreground">{profile.email}</div>
               </div>
             </div>
           </div>
@@ -110,10 +110,10 @@ export const ProfileView: React.FC = () => {
           {/* Account Status */}
           <div className="flex items-center justify-between p-4 border rounded-lg">
             <div className="flex items-center gap-3">
-              <Shield className="h-5 w-5 text-gray-500" />
+              <Shield className="h-5 w-5 text-muted-foreground" />
               <div>
                 <div className="font-medium">Account Status</div>
-                <div className="text-sm text-gray-600">
+                <div className="text-sm text-muted-foreground">
                   <Badge variant={profile.is_active ? "default" : "secondary"}>
                     {profile.is_active ? "Active" : "Inactive"}
                   </Badge>
@@ -125,10 +125,10 @@ export const ProfileView: React.FC = () => {
           {/* Theme Settings */}
           <div className="flex items-center justify-between p-4 border rounded-lg">
             <div className="flex items-center gap-3">
-              <Settings className="h-5 w-5 text-gray-500" />
+              <Settings className="h-5 w-5 text-muted-foreground" />
               <div>
                 <div className="font-medium">Theme Preference</div>
-                <div className="text-sm text-gray-600 dark:text-gray-400">Choose your preferred color theme</div>
+                <div className="text-sm text-muted-foreground">Choose your preferred color theme</div>
               </div>
             </div>
             <ThemeToggle />
@@ -137,10 +137,10 @@ export const ProfileView: React.FC = () => {
           {/* Created Date */}
           <div className="flex items-center justify-between p-4 border rounded-lg">
             <div className="flex items-center gap-3">
-              <CalendarDays className="h-5 w-5 text-gray-500" />
+              <CalendarDays className="h-5 w-5 text-muted-foreground" />
               <div>
                 <div className="font-medium">Member Since</div>
-                <div className="text-sm text-gray-600">
+                <div className="text-sm text-muted-foreground">
                   {formatDate(profile.created_at)}
                 </div>
               </div>
@@ -151,10 +151,10 @@ export const ProfileView: React.FC = () => {
           {profile.updated_at && (
             <div className="flex items-center justify-between p-4 border rounded-lg">
               <div className="flex items-center gap-3">
-                <CalendarDays className="h-5 w-5 text-gray-500" />
+                <CalendarDays className="h-5 w-5 text-muted-foreground" />
                 <div>
                   <div className="font-medium">Last Updated</div>
-                  <div className="text-sm text-gray-600">
+                  <div className="text-sm text-muted-foreground">
                     {formatDate(profile.updated_at)}
                   </div>
                 </div>
