@@ -6,10 +6,10 @@ Follow these steps:
 2. Understand the problem described in the ticket
 3. Search the codebase for relevant files
 4. Start a new branch using the ID of the ticket (for example NEWS-1)
-4. Implement the necessary changes to solve the ticket 
-5. Write and run tests to verify the solution
-6. Ensure code passes linting and type checking
-7. Create a descriptive commit message
-8. Push and create a PR, using the ID of the ticket (for example NEWS-1) so it gets linked in Jira ticket
+5. Implement the necessary changes to solve the ticket 
+6. Write and run tests to verify the solution
+7. Ensure code passes linting and type checking
+8. Create a descriptive commit message that includes the Jira ticket ID (e.g., "NEWS-1") in both the commit title and description for proper linking
+9. Push and create a PR, including the Jira ticket ID (e.g., "NEWS-1") in the PR title and description so it gets linked in the Jira ticket
 
 Remember to use the GitHub CLI (`gh`) for all GitHub-related tasks.
