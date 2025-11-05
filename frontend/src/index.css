@@ -160,11 +160,6 @@ h1 {
   body {
     @apply bg-background text-foreground;
   }
-  
-  /* Force button text colors to apply to Link components */
-  button a, [data-slot="button"] a {
-    color: inherit !important;
-  }
 }
 
 * {
