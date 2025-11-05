@@ -11,31 +11,31 @@ export const NewsStats = () => {
       label: 'To Read',
       value: stats.pending,
       icon: BookOpen,
-      color: 'text-yellow-600 bg-yellow-100',
+      color: 'text-yellow-600 bg-yellow-100 dark:text-yellow-400 dark:bg-yellow-900/30',
     },
     {
       label: 'Reading',
       value: stats.reading,
       icon: Book,
-      color: 'text-blue-600 bg-blue-100',
+      color: 'text-blue-600 bg-blue-100 dark:text-blue-400 dark:bg-blue-900/30',
     },
     {
       label: 'Completed',
       value: stats.read,
       icon: CheckCircle,
-      color: 'text-green-600 bg-green-100',
+      color: 'text-green-600 bg-green-100 dark:text-green-400 dark:bg-green-900/30',
     },
     {
       label: 'Favorites',
       value: stats.favorites,
       icon: Heart,
-      color: 'text-red-600 bg-red-100',
+      color: 'text-red-600 bg-red-100 dark:text-red-400 dark:bg-red-900/30',
     },
     {
       label: 'Total',
       value: stats.total,
       icon: TrendingUp,
-      color: 'text-purple-600 bg-purple-100',
+      color: 'text-purple-600 bg-purple-100 dark:text-purple-400 dark:bg-purple-900/30',
     },
   ];
 
@@ -44,7 +44,7 @@ export const NewsStats = () => {
       {statItems.map((stat) => {
         const Icon = stat.icon;
         return (
-          <Card key={stat.label} className="bg-white/95 backdrop-blur-sm">
+          <Card key={stat.label}>
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
                 <div>

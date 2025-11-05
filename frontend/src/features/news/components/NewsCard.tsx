@@ -52,7 +52,7 @@ export const NewsCard = ({ item, isDragging = false }: NewsCardProps) => {
     >
       <Card
         className={cn(
-          'bg-white/95 backdrop-blur-sm hover:shadow-lg transition-all',
+          'hover:shadow-lg transition-all',
           STATUS_COLORS[item.status]
         )}
       >

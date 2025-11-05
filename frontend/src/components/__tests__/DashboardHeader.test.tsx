@@ -12,6 +12,13 @@ vi.mock('@/features/auth/hooks/useAuthContext', () => ({
   useAuthContext: () => mockUseAuthContext()
 }))
 
+// Mock react-router-dom
+vi.mock('react-router-dom', () => ({
+  Link: ({ to, children, ...props }: any) => (
+    <a href={to} {...props}>{children}</a>
+  )
+}))
+
 // Mock Lucide React icons
 vi.mock('lucide-react', () => ({
   LogOut: ({ className }: { className?: string }) => (
@@ -19,6 +26,9 @@ vi.mock('lucide-react', () => ({
   ),
   User: ({ className }: { className?: string }) => (
     <span data-testid="user-icon" className={className}>User</span>
+  ),
+  Settings: ({ className }: { className?: string }) => (
+    <span data-testid="settings-icon" className={className}>Settings</span>
   )
 }))
 

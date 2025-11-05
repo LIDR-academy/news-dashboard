@@ -89,6 +89,7 @@ frontend/
 - **State Management**: React Context + React Query (TanStack Query)
 - **Routing**: React Router v7
 - **Form Validation**: Zod schemas
+- **Theme**: next-themes for dark/light mode with system preference support
 - **Testing**: Vitest + React Testing Library
 
 ## 📦 Installation

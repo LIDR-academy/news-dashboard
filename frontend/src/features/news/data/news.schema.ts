@@ -70,17 +70,17 @@ export interface NewsStats {
 
 // Category colors for UI
 export const CATEGORY_COLORS: Record<NewsCategory, string> = {
-  [NewsCategory.GENERAL]: 'bg-gray-100 text-gray-800',
-  [NewsCategory.RESEARCH]: 'bg-purple-100 text-purple-800',
-  [NewsCategory.PRODUCT]: 'bg-blue-100 text-blue-800',
-  [NewsCategory.COMPANY]: 'bg-green-100 text-green-800',
-  [NewsCategory.TUTORIAL]: 'bg-yellow-100 text-yellow-800',
-  [NewsCategory.OPINION]: 'bg-pink-100 text-pink-800',
+  [NewsCategory.GENERAL]: 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200',
+  [NewsCategory.RESEARCH]: 'bg-purple-100 text-purple-800 dark:bg-purple-900/40 dark:text-purple-200',
+  [NewsCategory.PRODUCT]: 'bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-200',
+  [NewsCategory.COMPANY]: 'bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-200',
+  [NewsCategory.TUTORIAL]: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/40 dark:text-yellow-200',
+  [NewsCategory.OPINION]: 'bg-pink-100 text-pink-800 dark:bg-pink-900/40 dark:text-pink-200',
 };
 
 // Status colors for UI
 export const STATUS_COLORS: Record<NewsStatus, string> = {
-  [NewsStatus.PENDING]: 'border-l-4 border-yellow-400',
-  [NewsStatus.READING]: 'border-l-4 border-blue-400',
-  [NewsStatus.READ]: 'border-l-4 border-green-400',
+  [NewsStatus.PENDING]: 'border-l-4 border-yellow-400 dark:border-yellow-500',
+  [NewsStatus.READING]: 'border-l-4 border-blue-400 dark:border-blue-500',
+  [NewsStatus.READ]: 'border-l-4 border-green-400 dark:border-green-500',
 };

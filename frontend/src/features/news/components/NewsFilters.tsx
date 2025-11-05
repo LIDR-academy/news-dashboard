@@ -38,7 +38,7 @@ export const NewsFilters = () => {
   const hasActiveFilters = filters.category || filters.is_favorite;
 
   return (
-    <div className="flex flex-wrap items-center gap-3 p-4 bg-white/95 backdrop-blur-sm rounded-lg border">
+    <div className="flex flex-wrap items-center gap-3 p-4 bg-card rounded-lg border">
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <Button variant="outline" className="gap-2">
